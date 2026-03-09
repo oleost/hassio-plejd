@@ -22,15 +22,17 @@ const getBaseTopic = (/** @type { string } */ uniqueId, /** @type { string } */ 
 
 const getTopicName = (
   /** @type { string } */ uniqueId,
-  /** @type { import('./types/Mqtt').MqttType } */ mqttDeviceType,
+  /** @type { import('./types/Mqtt').MqttType | string } */ mqttDeviceType,
   /** @type { import('./types/Mqtt').TopicType } */ topicType,
 ) => `${getBaseTopic(uniqueId, mqttDeviceType)}/${topicType}`;
 
 const getButtonEventTopic = (/** @type {string} */ deviceId) =>
   `${getTopicName(deviceId, MQTT_TYPES.DEVICE_AUTOMATION, TOPIC_TYPES.STATE)}`;
-const getTriggerUniqueId = (/** @type { string } */ uniqueId) => `${uniqueId}_trig`;
+
+// Updated to use device_automation for native HA UI support instead of event
 const getSceneEventTopic = (/** @type {string} */ sceneId) =>
-  `${getTopicName(getTriggerUniqueId(sceneId), MQTT_TYPES.DEVICE_AUTOMATION, TOPIC_TYPES.STATE)}`;
+  `${getTopicName(`${sceneId}_event`, MQTT_TYPES.DEVICE_AUTOMATION, TOPIC_TYPES.STATE)}`;
+
 const getSubscribePath = () => `${discoveryPrefix}/+/${nodeId}/#`;
 
 const decodeTopicRegexp =
@@ -88,6 +90,13 @@ const getSceneDiscoveryPayload = (
   payload_on: MQTT_STATE.ON,
   qos: 1,
   retain: true, // Discovery messages should be retained to account for HA restarts
+  // Added device block so HA groups the Scene and the Event entity together
+  device: {
+    identifiers: `${sceneDevice.uniqueId}`,
+    manufacturer: 'Plejd',
+    model: 'Scene',
+    name: sceneDevice.name,
+  },
 });
 
 const getInputDeviceTriggerDiscoveryPayload = (
@@ -109,20 +118,22 @@ const getInputDeviceTriggerDiscoveryPayload = (
   },
 });
 
-const getSceneDeviceTriggerhDiscoveryPayload = (
+// NEW FUNCTION: Uses native device_automation so it works perfectly in HA's UI
+const getSceneEventDiscoveryPayload = (
   /** @type {import('./types/DeviceRegistry').OutputDevice} */ sceneDevice,
 ) => ({
   automation_type: 'trigger',
-  '~': getBaseTopic(`${sceneDevice.uniqueId}_trig`, MQTT_TYPES.DEVICE_AUTOMATION),
+  payload: 'activated',
+  '~': getBaseTopic(`${sceneDevice.uniqueId}_event`, MQTT_TYPES.DEVICE_AUTOMATION),
   qos: 1,
-  retain: true, // Discovery messages should be retained to account for HA restarts
+  retain: true,
+  subtype: 'scene',
   topic: `~/${TOPIC_TYPES.STATE}`,
-  type: 'scene',
-  subtype: 'trigger',
+  type: 'button_short_press',
   device: {
-    identifiers: `${sceneDevice.uniqueId}_trigger`,
+    identifiers: `${sceneDevice.uniqueId}`,
     manufacturer: 'Plejd',
-    model: sceneDevice.typeName,
+    model: 'Scene',
     name: sceneDevice.name,
   },
 });
@@ -414,15 +425,12 @@ class MqttClient extends EventEmitter {
         },
       );
 
-      const sceneTriggerConfigPayload = getSceneDeviceTriggerhDiscoveryPayload(sceneDevice);
+      // PUBLISHING DEVICE AUTOMATION INSTEAD OF EVENT TO FIX HA UI BUG
+      const sceneEventConfigPayload = getSceneEventDiscoveryPayload(sceneDevice);
 
       this.client.publish(
-        getTopicName(
-          getTriggerUniqueId(sceneDevice.uniqueId),
-          MQTT_TYPES.DEVICE_AUTOMATION,
-          TOPIC_TYPES.CONFIG,
-        ),
-        JSON.stringify(sceneTriggerConfigPayload),
+        getTopicName(`${sceneDevice.uniqueId}_event`, MQTT_TYPES.DEVICE_AUTOMATION, TOPIC_TYPES.CONFIG),
+        JSON.stringify(sceneEventConfigPayload),
         {
           retain: true, // Discovery messages should be retained to account for HA restarts
           qos: 1,
@@ -506,11 +514,6 @@ class MqttClient extends EventEmitter {
       retain: false,
       qos: 1,
     });
-    // this.client.publish(
-    //   getTopicName(device.uniqueId, mqttType, TOPIC_TYPES.AVAILABILITY),
-    //   AVAILABILITY.ONLINE,
-    //   { retain: false, qos: 1 },
-    // );
   }
 
   /**
@@ -530,7 +533,8 @@ class MqttClient extends EventEmitter {
    */
   sceneTriggered(sceneId) {
     logger.verbose(`Scene triggered: ${sceneId}`);
-    this.client.publish(getSceneEventTopic(sceneId), '', {
+    // Sending the exact payload defined in the device_automation discovery
+    this.client.publish(getSceneEventTopic(sceneId), 'activated', {
       qos: 1,
       retain: false,
     });
