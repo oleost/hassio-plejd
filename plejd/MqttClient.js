@@ -29,9 +29,13 @@ const getTopicName = (
 const getButtonEventTopic = (/** @type {string} */ deviceId) =>
   `${getTopicName(deviceId, MQTT_TYPES.DEVICE_AUTOMATION, TOPIC_TYPES.STATE)}`;
 
-// Updated to use device_automation for native HA UI support instead of event
+// Trigger for the UI Automation builder
 const getSceneEventTopic = (/** @type {string} */ sceneId) =>
   `${getTopicName(`${sceneId}_event`, MQTT_TYPES.DEVICE_AUTOMATION, TOPIC_TYPES.STATE)}`;
+
+// Entity for the UI History/Last Triggered
+const getSceneHistoryTopic = (/** @type {string} */ sceneId) =>
+  `${getTopicName(`${sceneId}_history`, 'event', TOPIC_TYPES.STATE)}`;
 
 const getSubscribePath = () => `${discoveryPrefix}/+/${nodeId}/#`;
 
@@ -118,7 +122,7 @@ const getInputDeviceTriggerDiscoveryPayload = (
   },
 });
 
-// NEW FUNCTION: Uses native device_automation so it works perfectly in HA's UI
+// For Automation UI: Fixes "Integration not found"
 const getSceneEventDiscoveryPayload = (
   /** @type {import('./types/DeviceRegistry').OutputDevice} */ sceneDevice,
 ) => ({
@@ -130,6 +134,23 @@ const getSceneEventDiscoveryPayload = (
   subtype: 'scene',
   topic: `~/${TOPIC_TYPES.STATE}`,
   type: 'button_short_press',
+  device: {
+    identifiers: `${sceneDevice.uniqueId}`,
+    manufacturer: 'Plejd',
+    model: 'Scene',
+    name: sceneDevice.name,
+  },
+});
+
+// For Device UI: Adds "Last Triggered" history
+const getSceneHistoryDiscoveryPayload = (
+  /** @type {import('./types/DeviceRegistry').OutputDevice} */ sceneDevice,
+) => ({
+  name: `Event`,
+  unique_id: `${sceneDevice.uniqueId}_history`,
+  '~': getBaseTopic(`${sceneDevice.uniqueId}_history`, 'event'),
+  state_topic: `~/${TOPIC_TYPES.STATE}`,
+  event_types: ['activated'],
   device: {
     identifiers: `${sceneDevice.uniqueId}`,
     manufacturer: 'Plejd',
@@ -425,14 +446,26 @@ class MqttClient extends EventEmitter {
         },
       );
 
-      // PUBLISHING DEVICE AUTOMATION INSTEAD OF EVENT TO FIX HA UI BUG
+      // PUBLISHING DEVICE AUTOMATION (TRIGGER)
       const sceneEventConfigPayload = getSceneEventDiscoveryPayload(sceneDevice);
 
       this.client.publish(
         getTopicName(`${sceneDevice.uniqueId}_event`, MQTT_TYPES.DEVICE_AUTOMATION, TOPIC_TYPES.CONFIG),
         JSON.stringify(sceneEventConfigPayload),
         {
-          retain: true, // Discovery messages should be retained to account for HA restarts
+          retain: true, 
+          qos: 1,
+        },
+      );
+
+      // PUBLISHING EVENT ENTITY (HISTORY)
+      const sceneHistoryConfigPayload = getSceneHistoryDiscoveryPayload(sceneDevice);
+
+      this.client.publish(
+        getTopicName(`${sceneDevice.uniqueId}_history`, 'event', TOPIC_TYPES.CONFIG),
+        JSON.stringify(sceneHistoryConfigPayload),
+        {
+          retain: true,
           qos: 1,
         },
       );
@@ -533,8 +566,15 @@ class MqttClient extends EventEmitter {
    */
   sceneTriggered(sceneId) {
     logger.verbose(`Scene triggered: ${sceneId}`);
-    // Sending the exact payload defined in the device_automation discovery
+    
+    // 1. Send raw string for Device Automation (Fixes Integration '' not found)
     this.client.publish(getSceneEventTopic(sceneId), 'activated', {
+      qos: 1,
+      retain: false,
+    });
+
+    // 2. Send JSON for Event Entity (Adds Last Triggered history)
+    this.client.publish(getSceneHistoryTopic(sceneId), JSON.stringify({ event_type: 'activated' }), {
       qos: 1,
       retain: false,
     });
