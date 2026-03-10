@@ -63,7 +63,7 @@ const getOutputDeviceDiscoveryPayload = (
   qos: 1,
   retain: true, // Discovery messages should be retained to account for HA restarts
   device: {
-    identifiers: `${device.uniqueId}`,
+    identifiers: [`${device.uniqueId}`],
     manufacturer: 'Plejd',
     model: device.typeName,
     name: device.name,
@@ -96,7 +96,7 @@ const getSceneDiscoveryPayload = (
   retain: true, // Discovery messages should be retained to account for HA restarts
   // Added device block so HA groups the Scene and the Event entity together
   device: {
-    identifiers: `${sceneDevice.uniqueId}`,
+    identifiers: [`${sceneDevice.uniqueId}`],
     manufacturer: 'Plejd',
     model: 'Scene',
     name: sceneDevice.name,
@@ -115,7 +115,7 @@ const getInputDeviceTriggerDiscoveryPayload = (
   topic: `~/${TOPIC_TYPES.STATE}`,
   type: 'button_short_press',
   device: {
-    identifiers: `${inputDevice.deviceId}`,
+    identifiers: [`${inputDevice.deviceId}`],
     manufacturer: 'Plejd',
     model: inputDevice.typeName,
     name: inputDevice.name,
@@ -135,7 +135,7 @@ const getSceneEventDiscoveryPayload = (
   topic: `~/${TOPIC_TYPES.STATE}`,
   type: 'button_short_press',
   device: {
-    identifiers: `${sceneDevice.uniqueId}`,
+    identifiers: [`${sceneDevice.uniqueId}`],
     manufacturer: 'Plejd',
     model: 'Scene',
     name: sceneDevice.name,
@@ -152,7 +152,7 @@ const getSceneHistoryDiscoveryPayload = (
   state_topic: `~/${TOPIC_TYPES.STATE}`,
   event_types: ['activated'],
   device: {
-    identifiers: `${sceneDevice.uniqueId}`,
+    identifiers: [`${sceneDevice.uniqueId}`],
     manufacturer: 'Plejd',
     model: 'Scene',
     name: sceneDevice.name,
@@ -474,7 +474,7 @@ class MqttClient extends EventEmitter {
         getTopicName(sceneDevice.uniqueId, MQTT_TYPES.SCENE, TOPIC_TYPES.AVAILABILITY),
         AVAILABILITY.ONLINE,
         {
-          retain: false, // Availability messages should NOT be retained
+          retain: true, // CHANGED TO TRUE: Keep "Activate" button available
           qos: 1,
         },
       );
