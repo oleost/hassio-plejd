@@ -231,7 +231,7 @@ class MqttClient extends EventEmitter {
       this.reconnect();
     });
 
-    this.client.on('message', (topic, message) => {
+    this.client.on('message', (topic, message, packet) => {
       try {
         logger.verbose(`Received mqtt message on ${topic}`);
         const decodedTopic = decodeTopic(topic);
@@ -258,6 +258,13 @@ class MqttClient extends EventEmitter {
               logger.verbose(
                 `Got mqtt SET command for ${decodedTopic.type}, ${deviceName} (${decodedTopic.id}): ${messageString}`,
               );
+
+              if (packet && packet.retain) {
+                logger.verbose(
+                  `Ignoring retained SET command for ${decodedTopic.type}, ${deviceName} (${decodedTopic.id}) - old message from broker`,
+                );
+                break;
+              }
 
               if (device) {
                 this.emit(MqttClient.EVENTS.stateChanged, device, command);
@@ -469,6 +476,12 @@ class MqttClient extends EventEmitter {
           qos: 1,
         },
       );
+
+      // Forcefully remove any retained SET messages for scene (prevents ghost activation on startup)
+      this.client.publish(getTopicName(sceneDevice.uniqueId, MQTT_TYPES.SCENE, TOPIC_TYPES.SET), null, {
+        retain: true,
+        qos: 1,
+      });
 
       this.client.publish(
         getTopicName(sceneDevice.uniqueId, MQTT_TYPES.SCENE, TOPIC_TYPES.AVAILABILITY),
