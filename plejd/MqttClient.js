@@ -259,7 +259,7 @@ class MqttClient extends EventEmitter {
                 `Got mqtt SET command for ${decodedTopic.type}, ${deviceName} (${decodedTopic.id}): ${messageString}`,
               );
 
-              if (packet && packet.retain) {
+              if (packet && packet.retain && decodedTopic.type === MQTT_TYPES.SCENE) {
                 logger.verbose(
                   `Ignoring retained SET command for ${decodedTopic.type}, ${deviceName} (${decodedTopic.id}) - old message from broker`,
                 );
