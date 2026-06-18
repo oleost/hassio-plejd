@@ -1,9 +1,9 @@
 name: Build add-on image
 
-# Builds the Plejd add-on image for each supported architecture.
-# - On pull_request / push to master: build only (--test), validates the build.
-# - On a published release: build and push the image to GHCR, tagged with the
-#   version from plejd/config.json (and :latest).
+# Builds the Plejd add-on image for each supported architecture with buildx.
+# - On pull_request / push to master: build only (no push), validates the build.
+# - On a published release (or manual dispatch): build and push to GHCR, tagged
+#   with the version from plejd/config.json (and :latest).
 #
 # Home Assistant pulls these pre-built images (see "image" in config.json) instead
 # of building the add-on locally on the user's machine.
@@ -34,28 +34,34 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch:
-          - aarch64
-          - amd64
+        include:
+          - arch: aarch64
+            base: ghcr.io/hassio-addons/base/aarch64:21.0.0
+          - arch: amd64
+            base: ghcr.io/hassio-addons/base/amd64:21.0.0
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7.0.0
 
-      - name: Log in to GitHub Container Registry
-        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
-        uses: docker/login-action@v4.2.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Read add-on version
+        id: meta
+        shell: bash
+        run: echo "version=$(jq -r .version plejd/config.json)" >> "$GITHUB_OUTPUT"
 
-      - name: Build ${{ matrix.arch }} add-on image
-        uses: home-assistant/builder@2026.03.2
+      - name: Build ${{ matrix.arch }} image
+        uses: home-assistant/builder/actions/build-image@2026.06.0
         with:
-          args: |
-            --${{ matrix.arch }}
-            --target /data/plejd
-            --image "{arch}-hassio-plejd"
-            --docker-hub "ghcr.io/oleost"
-            --addon
-            ${{ (github.event_name == 'release' || github.event_name == 'workflow_dispatch') && ' ' || '--test' }}
+          arch: ${{ matrix.arch }}
+          context: plejd
+          image: ghcr.io/oleost/${{ matrix.arch }}-hassio-plejd
+          image-tags: |
+            ${{ steps.meta.outputs.version }}
+            latest
+          version: ${{ steps.meta.outputs.version }}
+          build-args: |
+            BUILD_FROM=${{ matrix.base }}
+            BUILD_ARCH=${{ matrix.arch }}
+            BUILD_VERSION=${{ steps.meta.outputs.version }}
+          push: ${{ github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}
+          cosign: false
+          container-registry-password: ${{ secrets.GITHUB_TOKEN }}
