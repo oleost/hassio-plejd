@@ -20,7 +20,13 @@ COPY ./package.json /plejd/
 ARG BUILD_ARCH
 
 # Install Node
+# The pinned base image ships musl-1.2.5-r10, but the Alpine v3.22 repository has
+# moved on to musl-1.2.5-r12. musl-dev (pulled in by libc-dev/g++) requires the
+# exact matching musl version, so apk fails with "musl breaks musl-dev" unless we
+# first upgrade musl to the current repo version. Upgrade musl up front to keep the
+# build working without bumping the whole base image.
 RUN set -eux; \
+  apk --no-cache upgrade musl musl-utils; \
   apk add --no-cache --virtual .build-dependencies \
   g++ \
   gcc \
@@ -63,11 +69,11 @@ LABEL \
   io.hass.arch="${BUILD_ARCH}" \
   io.hass.type="addon" \
   io.hass.version=${BUILD_VERSION} \
-  maintainer="Marcus Westin <marcus@sekurbit.se>" \
+  maintainer="oleost <oleprong@gmail.com>" \
   org.label-schema.description="Adds support for the Swedish home automation devices from Plejd." \
   org.label-schema.build-date=${BUILD_DATE} \
   org.label-schema.name="Plejd" \
   org.label-schema.schema-version="1.0" \
-  org.label-schema.usage="https://github.com/icanos/hassio-plejd/tree/master/README.md" \
+  org.label-schema.usage="https://github.com/oleost/hassio-plejd/tree/master/README.md" \
   org.label-schema.vcs-ref=${BUILD_REF} \
-  org.label-schema.vcs-url="https://github.com/icanos/hassio-plejd"
+  org.label-schema.vcs-url="https://github.com/oleost/hassio-plejd"

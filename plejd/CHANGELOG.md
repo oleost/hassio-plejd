@@ -5,6 +5,13 @@
 > upstream and adds scene-related improvements (see entries below). Everything
 > else works the same as upstream.
 
+## [0.19.10](https://github.com/oleost/hassio-plejd/tree/0.19.10) (2026-06-18)
+
+**Fixed:**
+
+- Add-on image failed to build with `ERROR: unable to select packages: musl-1.2.5-r10 breaks musl-dev-1.2.5-r12`. The pinned base image ships an older `musl` than the current Alpine v3.22 repository, and `musl-dev` requires an exact match. The Dockerfile now upgrades `musl`/`musl-utils` before installing the build dependencies, so the add-on builds and updates again.
+- Pointed the Docker image labels (`maintainer`, usage and vcs-url) to the oleost fork.
+
 ## [0.19.9](https://github.com/oleost/hassio-plejd/tree/0.19.9) (2026-06-18)
 
 **Maintenance:**
