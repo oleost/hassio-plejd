@@ -93,7 +93,10 @@ const getSceneDiscoveryPayload = (
   availability_topic: `~/${TOPIC_TYPES.AVAILABILITY}`,
   payload_on: MQTT_STATE.ON,
   qos: 1,
-  retain: true, // Discovery messages should be retained to account for HA restarts
+  // Scene activations are momentary - never retain the command, otherwise HA
+  // republishes a retained "ON" that (with rap:true) reaches us as packet.retain=true
+  // and gets dropped by the retained-SET guard, so the scene never executes.
+  retain: false,
   // Added device block so HA groups the Scene and the Event entity together
   device: {
     identifiers: [`${sceneDevice.uniqueId}`],
