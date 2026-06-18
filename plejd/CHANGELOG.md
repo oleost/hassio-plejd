@@ -5,6 +5,16 @@
 > upstream and adds scene-related improvements (see entries below). Everything
 > else works the same as upstream.
 
+## [0.19.12](https://github.com/oleost/hassio-plejd/tree/0.19.12) (2026-06-18)
+
+**Fixed:**
+
+- Finally resolved the `musl breaks musl-dev` build failure. No `apk` workaround could move `musl` off the version held by the old base image (`18.2.0`), so the build kept failing. Bumped the base image to `21.0.0` (Alpine 3.24), which is internally consistent, and removed the `apk upgrade` workaround.
+
+**Changed:**
+
+- Dropped the 32-bit architectures (`armhf`, `armv7`, `i386`). The hassio-addons base image no longer publishes them from v19 onwards, so the add-on now targets `aarch64` and `amd64` only.
+
 ## [0.19.11](https://github.com/oleost/hassio-plejd/tree/0.19.11) (2026-06-18)
 
 **Fixed:**
