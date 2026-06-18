@@ -5,6 +5,20 @@ It uses MQTT to communicate with Home Assistant and supports auto discovery of t
 
 It also supports notifications so that changed made in the Plejd app are propagated to Home Assistant.
 
+## This fork
+
+This is a fork of [icanos/hassio-plejd](https://github.com/icanos/hassio-plejd) that improves how Plejd **scenes** integrate with Home Assistant. Everything else (lights, switches, relays, button/rotary inputs, MQTT auto-discovery, app→HA notifications) works the same as upstream.
+
+What this fork adds/changes compared to upstream:
+
+- **Scenes work as Device Automation triggers.** Scenes are published as `button_short_press` triggers (`subtype: scene`), so they show up correctly in the Home Assistant automation UI. This fixes the upstream "Integration not found" problem when trying to use a scene as a trigger.
+- **Scene "Last Triggered" history.** Each scene gets a dedicated Event entity that records when it was last activated, so you can see scene activation history in Home Assistant.
+- **Scenes grouped as a single device.** The scene's "Activate" button and its Event entity are grouped under one Plejd device in Home Assistant, instead of being scattered as separate entities.
+- **No more ghost scene activations on startup.** Retained MQTT `SET` messages for scenes are ignored (and cleared) on startup, so a scene is not accidentally re-triggered when the add-on restarts. This guard only applies to scenes — retained commands for lights/switches are still honored.
+- **Scene "Activate" button stays available.** The scene availability message is now retained, so the activate button does not disappear after a restart.
+
+Upstream remains the canonical project; this fork tracks it and only carries the scene-related changes above.
+
 Thanks to [ha-plejd](https://github.com/klali/ha-plejd) for inspiration.
 
 Disclaimer:
