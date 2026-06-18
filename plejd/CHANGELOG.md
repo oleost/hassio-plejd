@@ -5,6 +5,19 @@
 > upstream and adds scene-related improvements (see entries below). Everything
 > else works the same as upstream.
 
+## [0.21.0](https://github.com/oleost/hassio-plejd/tree/0.21.0) (2026-06-18)
+
+**Changed:**
+
+- The add-on is now distributed as a **pre-built image**. A GitHub Actions
+  workflow builds the `aarch64` and `amd64` images on each release and pushes
+  them to GHCR (`ghcr.io/oleost/{arch}-hassio-plejd`), and `config.json` now
+  references that image. Home Assistant pulls the ready-made image instead of
+  building it locally, which avoids local build failures (such as the base-image
+  `musl` issue fixed in 0.20.0) and makes installs/updates faster.
+- Pull requests and pushes to `master` now run a build-only CI check, so build
+  breakage is caught before a release rather than by users.
+
 ## [0.20.0](https://github.com/oleost/hassio-plejd/tree/0.20.0) (2026-06-18)
 
 This release consolidates the fork's changes relative to upstream 0.19.0.
