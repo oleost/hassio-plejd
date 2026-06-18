@@ -27,7 +27,7 @@ on:
 jobs:
   build:
     name: Build ${{ matrix.arch }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       packages: write
@@ -35,10 +35,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # build-image builds for the runner's native platform, so each arch is
+          # built on a matching native runner (the HA base images are per-arch).
           - arch: aarch64
             base: ghcr.io/hassio-addons/base/aarch64:21.0.0
+            runner: ubuntu-24.04-arm
           - arch: amd64
             base: ghcr.io/hassio-addons/base/amd64:21.0.0
+            runner: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7.0.0
