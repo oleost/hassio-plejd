@@ -1,5 +1,43 @@
 # Changelog hassio-plejd Home Assistant Plejd addon
 
+> This is the [oleost fork](https://github.com/oleost/hassio-plejd) of
+> [icanos/hassio-plejd](https://github.com/icanos/hassio-plejd). It tracks
+> upstream and adds scene-related improvements (see entries below). Everything
+> else works the same as upstream.
+
+## [0.19.9](https://github.com/oleost/hassio-plejd/tree/0.19.9) (2026-06-18)
+
+**Maintenance:**
+
+- Point add-on metadata (`url`, repository info) to the oleost fork so Home
+  Assistant fetches documentation and updates from the right repository.
+- Updated changelog to include the fork's scene-related releases.
+
+## [0.19.8](https://github.com/oleost/hassio-plejd/tree/0.19.8) (2026-06-18)
+
+**Fixed:**
+
+- Scene activation from Home Assistant never executed. Scene discovery used
+  `retain: true`, so Home Assistant published every "Activate" command as a
+  retained message. Combined with the subscription's `rap: true` (retain as
+  published), each press arrived with `packet.retain = true` and was dropped by
+  the retained-SET guard, so the scene never ran (only the faked event was sent
+  back to HA). Scene commands are now published with `retain: false`.
+
+## [0.19.2](https://github.com/oleost/hassio-plejd/tree/0.19.2)
+
+**Implemented enhancements:**
+
+- Scenes now work as Home Assistant Device Automation triggers
+  (`button_short_press`, `subtype: scene`), fixing the upstream "Integration not
+  found" problem when using a scene as an automation trigger.
+- Added a per-scene Event entity that records "Last Triggered" history.
+- Scenes are grouped as a single device in Home Assistant (Activate button +
+  Event entity under one device).
+- Ignore retained MQTT `SET` messages for scenes on startup to prevent ghost
+  scene activations after a restart (guard only applies to scenes, not to
+  lights/switches).
+
 ## [0.19.0](https://github.com/icanos/hassio-plejd/tree/0.19.0) (2025-10-17)
 
 [Full Changelog](https://github.com/icanos/hassio-plejd/compare/0.18.0...0.19.0)

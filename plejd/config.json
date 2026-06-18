@@ -1,9 +1,9 @@
 {
   "name": "Plejd",
-  "version": "0.19.8",
+  "version": "0.19.9",
   "slug": "plejd",
   "description": "Adds support for the Swedish home automation devices from Plejd.",
-  "url": "https://github.com/icanos/hassio-plejd/",
+  "url": "https://github.com/oleost/hassio-plejd/",
   "arch": ["armhf", "armv7", "aarch64", "amd64", "i386"],
   "startup": "application",
   "boot": "auto",
