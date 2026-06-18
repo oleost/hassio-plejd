@@ -5,61 +5,35 @@
 > upstream and adds scene-related improvements (see entries below). Everything
 > else works the same as upstream.
 
-## [0.19.12](https://github.com/oleost/hassio-plejd/tree/0.19.12) (2026-06-18)
+## [0.20.0](https://github.com/oleost/hassio-plejd/tree/0.20.0) (2026-06-18)
 
-**Fixed:**
+This release consolidates the fork's changes relative to upstream 0.19.0.
 
-- Finally resolved the `musl breaks musl-dev` build failure. No `apk` workaround could move `musl` off the version held by the old base image (`18.2.0`), so the build kept failing. Bumped the base image to `21.0.0` (Alpine 3.24), which is internally consistent, and removed the `apk upgrade` workaround.
-
-**Changed:**
-
-- Dropped the 32-bit architectures (`armhf`, `armv7`, `i386`). The hassio-addons base image no longer publishes them from v19 onwards, so the add-on now targets `aarch64` and `amd64` only.
-
-## [0.19.11](https://github.com/oleost/hassio-plejd/tree/0.19.11) (2026-06-18)
-
-**Fixed:**
-
-- The 0.19.10 build fix did not work: the base image pins `musl` to an exact version in its world dependencies, so `apk upgrade musl` was a no-op and the `musl breaks musl-dev` error persisted. The Dockerfile now runs `apk upgrade --available`, which resets the versioned world pins and brings every base package up to the current Alpine v3.22 repo (incl. `musl` r12), so the build succeeds. Base image stays on 18.2.0 (no Alpine/Node jump).
-
-## [0.19.10](https://github.com/oleost/hassio-plejd/tree/0.19.10) (2026-06-18)
-
-**Fixed:**
-
-- Add-on image failed to build with `ERROR: unable to select packages: musl-1.2.5-r10 breaks musl-dev-1.2.5-r12`. The pinned base image ships an older `musl` than the current Alpine v3.22 repository, and `musl-dev` requires an exact match. (Superseded by 0.19.11 — the targeted `musl` upgrade did not override the version pin.)
-- Pointed the Docker image labels (`maintainer`, usage and vcs-url) to the oleost fork.
-
-## [0.19.9](https://github.com/oleost/hassio-plejd/tree/0.19.9) (2026-06-18)
-
-**Maintenance:**
-
-- Point add-on metadata (`url`, repository info) to the oleost fork so Home
-  Assistant fetches documentation and updates from the right repository.
-- Updated changelog to include the fork's scene-related releases.
-
-## [0.19.8](https://github.com/oleost/hassio-plejd/tree/0.19.8) (2026-06-18)
-
-**Fixed:**
-
-- Scene activation from Home Assistant never executed. Scene discovery used
-  `retain: true`, so Home Assistant published every "Activate" command as a
-  retained message. Combined with the subscription's `rap: true` (retain as
-  published), each press arrived with `packet.retain = true` and was dropped by
-  the retained-SET guard, so the scene never ran (only the faked event was sent
-  back to HA). Scene commands are now published with `retain: false`.
-
-## [0.19.2](https://github.com/oleost/hassio-plejd/tree/0.19.2)
-
-**Implemented enhancements:**
+**Scenes:**
 
 - Scenes now work as Home Assistant Device Automation triggers
   (`button_short_press`, `subtype: scene`), fixing the upstream "Integration not
   found" problem when using a scene as an automation trigger.
-- Added a per-scene Event entity that records "Last Triggered" history.
-- Scenes are grouped as a single device in Home Assistant (Activate button +
-  Event entity under one device).
-- Ignore retained MQTT `SET` messages for scenes on startup to prevent ghost
-  scene activations after a restart (guard only applies to scenes, not to
-  lights/switches).
+- Added a per-scene Event entity that records "Last Triggered" history, and
+  grouped each scene's Activate button and Event entity under a single device.
+- Fixed scene activation from Home Assistant never executing: scene discovery
+  used `retain: true`, so HA published every "Activate" as a retained command
+  which (with the subscription's `rap: true`) reached the add-on as
+  `packet.retain = true` and was dropped by the retained-SET guard. Scene
+  commands are now published with `retain: false`, and retained scene `SET`
+  messages are still ignored on startup to prevent ghost activations.
+
+**Build / infrastructure:**
+
+- Fixed the `musl breaks musl-dev` Docker build failure by bumping the
+  hassio-addons base image to `21.0.0` (Alpine 3.24). The previous base
+  (`18.2.0`) held `musl` at a version the current Alpine repo had moved past,
+  and no `apk` workaround could reconcile it.
+- Dropped the 32-bit architectures (`armhf`, `armv7`, `i386`) — the base image no
+  longer publishes them from v19 onwards. The add-on now targets `aarch64` and
+  `amd64`.
+- Pointed the add-on metadata and Docker image labels (`url`, repository info,
+  `maintainer`, vcs-url) to the oleost fork.
 
 ## [0.19.0](https://github.com/icanos/hassio-plejd/tree/0.19.0) (2025-10-17)
 
