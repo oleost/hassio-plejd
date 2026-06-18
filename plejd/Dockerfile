@@ -20,13 +20,15 @@ COPY ./package.json /plejd/
 ARG BUILD_ARCH
 
 # Install Node
-# The pinned base image ships musl-1.2.5-r10, but the Alpine v3.22 repository has
-# moved on to musl-1.2.5-r12. musl-dev (pulled in by libc-dev/g++) requires the
-# exact matching musl version, so apk fails with "musl breaks musl-dev" unless we
-# first upgrade musl to the current repo version. Upgrade musl up front to keep the
-# build working without bumping the whole base image.
+# The pinned base image ships musl-1.2.5-r10 with a versioned world pin, but the
+# Alpine v3.22 repository has moved on to musl-1.2.5-r12. musl-dev (pulled in by
+# libc-dev/g++) requires the exact matching musl version, so apk fails with
+# "musl breaks musl-dev". A plain `apk upgrade musl` is a no-op because of the
+# version pin; `apk upgrade --available` resets the versioned world dependencies
+# and brings every base package up to the current v3.22 repo (incl. musl r12),
+# which resolves the conflict without bumping to a newer base image / Alpine.
 RUN set -eux; \
-  apk --no-cache upgrade musl musl-utils; \
+  apk --no-cache upgrade --available; \
   apk add --no-cache --virtual .build-dependencies \
   g++ \
   gcc \

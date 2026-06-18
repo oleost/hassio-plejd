@@ -5,11 +5,17 @@
 > upstream and adds scene-related improvements (see entries below). Everything
 > else works the same as upstream.
 
+## [0.19.11](https://github.com/oleost/hassio-plejd/tree/0.19.11) (2026-06-18)
+
+**Fixed:**
+
+- The 0.19.10 build fix did not work: the base image pins `musl` to an exact version in its world dependencies, so `apk upgrade musl` was a no-op and the `musl breaks musl-dev` error persisted. The Dockerfile now runs `apk upgrade --available`, which resets the versioned world pins and brings every base package up to the current Alpine v3.22 repo (incl. `musl` r12), so the build succeeds. Base image stays on 18.2.0 (no Alpine/Node jump).
+
 ## [0.19.10](https://github.com/oleost/hassio-plejd/tree/0.19.10) (2026-06-18)
 
 **Fixed:**
 
-- Add-on image failed to build with `ERROR: unable to select packages: musl-1.2.5-r10 breaks musl-dev-1.2.5-r12`. The pinned base image ships an older `musl` than the current Alpine v3.22 repository, and `musl-dev` requires an exact match. The Dockerfile now upgrades `musl`/`musl-utils` before installing the build dependencies, so the add-on builds and updates again.
+- Add-on image failed to build with `ERROR: unable to select packages: musl-1.2.5-r10 breaks musl-dev-1.2.5-r12`. The pinned base image ships an older `musl` than the current Alpine v3.22 repository, and `musl-dev` requires an exact match. (Superseded by 0.19.11 — the targeted `musl` upgrade did not override the version pin.)
 - Pointed the Docker image labels (`maintainer`, usage and vcs-url) to the oleost fork.
 
 ## [0.19.9](https://github.com/oleost/hassio-plejd/tree/0.19.9) (2026-06-18)
