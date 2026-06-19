@@ -52,15 +52,29 @@ jobs:
         shell: bash
         run: echo "version=$(jq -r .version plejd/config.json)" >> "$GITHUB_OUTPUT"
 
+      - name: Compute image tags
+        id: tags
+        shell: bash
+        # Always tag with the version. Only move ":latest" on a full (non-prerelease)
+        # GitHub release, so beta builds (workflow_dispatch / pre-release) never clobber
+        # the tag that production users implicitly track.
+        run: |
+          {
+            echo "list<<EOF"
+            echo "${{ steps.meta.outputs.version }}"
+            if [ "${{ github.event_name }}" = "release" ] && [ "${{ github.event.release.prerelease }}" = "false" ]; then
+              echo "latest"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build ${{ matrix.arch }} image
         uses: home-assistant/builder/actions/build-image@2026.06.0
         with:
           arch: ${{ matrix.arch }}
           context: plejd
           image: ghcr.io/oleost/${{ matrix.arch }}-hassio-plejd
-          image-tags: |
-            ${{ steps.meta.outputs.version }}
-            latest
+          image-tags: ${{ steps.tags.outputs.list }}
           version: ${{ steps.meta.outputs.version }}
           build-args: |
             BUILD_FROM=${{ matrix.base }}
