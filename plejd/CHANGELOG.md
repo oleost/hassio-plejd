@@ -5,6 +5,24 @@
 > upstream and adds scene-related improvements (see entries below). Everything
 > else works the same as upstream.
 
+## [0.22.0-beta.1](https://github.com/oleost/hassio-plejd/tree/0.22.0-beta.1) (2026-06-19)
+
+> Beta release for testing the new hardware-id mappings below. Install via
+> manual installation of the `plejd/` folder from the `fix/hardware-id-mappings`
+> branch; Home Assistant pulls the pre-built `0.22.0-beta.1` image from GHCR.
+
+**Fixed:**
+
+- Recognize newer hardware revisions that previously failed with an "Unknown
+  device type with hardware id N" error and never appeared in Home Assistant:
+  - `24` = DIM-02 ("LC2" hardware version), output/light
+    ([#337](https://github.com/icanos/hassio-plejd/issues/337))
+  - `38` = WPH-01-LC, input/device automation
+    ([#338](https://github.com/icanos/hassio-plejd/issues/338),
+    [#332](https://github.com/icanos/hassio-plejd/issues/332))
+  - `42` = WRT-01 (newer hardware version), input/device automation
+    ([#339](https://github.com/icanos/hassio-plejd/issues/339))
+
 ## [0.21.0](https://github.com/oleost/hassio-plejd/tree/0.21.0) (2026-06-18)
 
 **Changed:**
