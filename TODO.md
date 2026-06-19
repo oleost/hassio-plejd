@@ -24,13 +24,17 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
 
 ## P1 — Real bugs, broad impact, clear fix
 
-- [ ] **#339 / #338 / #332 — Unknown device hardware id `42` and `38`.**
-      Newer hardware revisions report ids not mapped in the device-type lookup:
-      - `42` = WRT-01 (wireless rotary) — note: filipsalo's fork already added this case.
-      - `38` = WPH-01-LC (`wph-01-lc-v4.41.3`, "2024Q3 Release").
-      Symptom: `Error trying to create input device: Unknown device type with hardware id N`.
+- [ ] **#339 / #338 / #332 / #337 — Unknown device hardware id `42`, `38`, `24`.**
+      Newer hardware revisions report ids not mapped in the device-type lookup. Same
+      root cause for all four — fix together (suggested branch: `fix/hardware-id-mappings`):
+      - `42` = WRT-01 (wireless rotary, input) — note: filipsalo's fork already added this case.
+      - `38` = WPH-01-LC (`wph-01-lc-v4.41.3`, "2024Q3 Release", input).
+      - `24` = DIM-02-LC2 (firmware 6.43.3, output) — confirmed from #337's attached log.
+      Symptom: `Error trying to create {input,output} device: Unknown device type with hardware id N`.
       Fix: add the missing `case`s to the hardware-id → device mapping in `plejd/PlejdApi.js`.
       Low risk, isolated, helps many users with current hardware.
+      Caveat for #337: mapping makes the DIM-02-LC2 appear in HA, but the reporter also
+      notes the lamp "randomly turns on" — track that separately; mapping may not fix it.
 
 - [ ] **#325 — `Cannot read property 'publish' of undefined` on eager discovery.**
       Discovery is sent before the MQTT client is connected, then again after connect.
@@ -72,8 +76,6 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
 
 ## Needs triage (may be hardware/user/feature, not confirmed our bug)
 
-- [~] **#337 — DIM-02 with newest firmware doesn't show up / turns on randomly.**
-      Could be Plejd/hardware rather than the add-on. Needs log review (attachment).
 - [~] **#311 — "Error trying to create output device"; dimmers + shutters missing.**
       Partly missing cover/shutter support (feature), partly a possible mapping error.
       Log is in a .docx attachment — needs extraction/review.
