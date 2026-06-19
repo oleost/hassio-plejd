@@ -17,17 +17,17 @@ What this fork adds/changes compared to upstream:
 - **No more ghost scene activations on startup.** Retained MQTT `SET` messages for scenes are ignored (and cleared) on startup, so a scene is not accidentally re-triggered when the add-on restarts. This guard only applies to scenes — retained commands for lights/switches are still honored.
 - **Scene "Activate" button stays available.** The scene availability message is now retained, so the activate button does not disappear after a restart.
 
-Upstream remains the canonical project; this fork tracks it and only carries the scene-related changes above.
+This fork tracks upstream and carries the scene-related changes above, plus a
+pre-built image pipeline (see the add-on [changelog](plejd/CHANGELOG.md)).
 
-Thanks to [ha-plejd](https://github.com/klali/ha-plejd) for inspiration.
+## Credits
 
-Disclaimer:
-I am in no way affiliated with Plejd and am solely doing this as a hobby project.
+This add-on was originally created by [Marcus Westin (icanos/hassio-plejd)](https://github.com/icanos/hassio-plejd)
+and inspired by [ha-plejd](https://github.com/klali/ha-plejd). This repository is
+a fork that continues development of that work. All original copyright and the
+Apache-2.0 license are retained — see [License](#license) below.
 
-**Did you like this? Consider helping me continue the development:**  
-[Buy me a coffee](https://www.buymeacoffee.com/w1ANTUb)
-
-[![Gitter](https://badges.gitter.im/hassio-plejd/community.svg)](https://gitter.im/hassio-plejd/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+Disclaimer: I am in no way affiliated with Plejd and am solely doing this as a hobby project.
 
 ## Addons
 

@@ -3,13 +3,12 @@
 Hass.io add-on for Plejd home automation devices. Gives you the ability to control the Plejd home automation devices through Home Assistant.
 It uses MQTT to communicate with Home Assistant and supports auto discovery of the devices in range. Changed made in the Plejd app are propagated to Home Assistant.
 
-Thanks to [ha-plejd](https://github.com/klali/ha-plejd) for inspiration.
+Originally created by [Marcus Westin (icanos/hassio-plejd)](https://github.com/icanos/hassio-plejd)
+and inspired by [ha-plejd](https://github.com/klali/ha-plejd). This is a maintained
+fork — see the top-level [README](../README.md) for what this fork changes.
 
 Disclaimer:
 I am in no way affiliated with Plejd and am solely doing this as a hobby project.
-
-**Did you like this? Consider helping me continue the development:**
-[Buy me a coffee](https://www.buymeacoffee.com/w1ANTUb)
 
 ## Getting started
 
@@ -43,7 +42,7 @@ Supported Plejd devices are detailed in a specific "Plejd devices" section below
 - Click on `Add-ons`
 - Click on `Add-on Store` in the bottom right corner of that page.
 - Click on the three vertical dots to the far right and chose `Repositories`
-- Paste the URL to this repo <https://github.com/icanos/hassio-plejd.git> in the `Add` field and hit `Add`.
+- Paste the URL to this repo <https://github.com/oleost/hassio-plejd> in the `Add` field and hit `Add`.
 - Scroll down and you should find a Plejd add-on that can be installed. Open that and install.
 - Configure hassio-plejd (see below).
 - Enjoy!
@@ -64,7 +63,7 @@ Browse your Home Assistant installation using a tool that allows you to manage f
 
 ### Install older versions or development version
 
-To install older versions, follow the "Manual Installation" instructions above, but copy the code from [one of the releases](https://github.com/icanos/hassio-plejd/releases). To test new functionality you can download the development version, available in the [develop branch](https://github.com/icanos/hassio-plejd/tree/develop).
+To install older versions, follow the "Manual Installation" instructions above, but copy the code from [one of the releases](https://github.com/oleost/hassio-plejd/releases).
 
 ### More details regarding installation
 
@@ -216,7 +215,7 @@ For partial type hinting you can run
 - `npm install --global typings`
 - `typings install`
 
-When contributing, please do so by forking the repo and then using pull requests towards the dev branch.
+When contributing, please do so by forking the repo and then using pull requests towards the `master` branch.
 
 ### Logs
 
