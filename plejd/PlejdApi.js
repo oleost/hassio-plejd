@@ -405,6 +405,15 @@ class PlejdApi {
           dimmable: true,
           broadcastClicks: false,
         };
+      case 24:
+        // See https://github.com/icanos/hassio-plejd/issues/337
+        return {
+          name: 'DIM-02',
+          description: '2-channel dimmer LED, 2*100 VA ("LC2" hardware/chip version)',
+          type: 'light',
+          dimmable: true,
+          broadcastClicks: false,
+        };
       case 36:
         return {
           name: 'LED-75',
@@ -414,6 +423,16 @@ class PlejdApi {
           colorTemp: true,
           broadcastClicks: false,
         };
+      case 38:
+        // See https://github.com/icanos/hassio-plejd/issues/338 and /332
+        return {
+          name: 'WPH-01',
+          description:
+            'Wireless push button, 4 buttons. 2 channels, on and off buttons for each channel ("LC" hardware/chip version)',
+          type: 'device_automation',
+          dimmable: false,
+          broadcastClicks: true,
+        };
       case 40:
         return {
           name: 'SPD-01',
@@ -421,6 +440,15 @@ class PlejdApi {
           type: 'light',
           dimmable: true,
           broadcastClicks: false,
+        };
+      case 42:
+        // See https://github.com/icanos/hassio-plejd/issues/339
+        return {
+          name: 'WRT-01',
+          description: 'Wireless rotary button (newer hardware/chip version)',
+          type: 'device_automation',
+          dimmable: false,
+          broadcastClicks: true,
         };
       case 135:
         return {
