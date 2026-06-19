@@ -1,6 +1,9 @@
 .DS_Store
 plejd.json
 
+# Claude Code local (machine-specific) settings
+.claude/settings.local.json
+
 # Logs
 logs
 *.log
