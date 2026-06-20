@@ -60,6 +60,15 @@ The `DeviceRegistry` translates between Plejd's multiple id spaces (BLE addresse
 
 **The version lives in `plejd/config.json`** and drives the image tag. Bump it there, and add a matching entry to `plejd/CHANGELOG.md`, when releasing.
 
+## Adding a new Plejd device / hardware id
+
+Recognition (`PlejdApi._getDeviceType`, a `switch` over `hardwareId`) and the BLE protocol
+(`PlejdBLEHandler`, keyed on command codes) are independent layers. A device that behaves
+like an existing category (light/relay/button/extender) usually needs only a new mapping
+case; a new capability (cover/thermostat/sensor) needs protocol + discovery work. The
+full runbook (decision tree, file map, testing, beta release) is the **`add-plejd-device`
+skill** — invoke it for this task.
+
 ## Conventions
 
 - The version in `plejd/config.json` is the single source of truth for the add-on version (also surfaced via `Configuration.getAddonInfo()`).
