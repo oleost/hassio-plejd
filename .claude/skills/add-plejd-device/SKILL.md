@@ -110,6 +110,45 @@ This path is open work; relevant feature requests: TRM-01 (#319), covers WIN-01/
 
 ---
 
+## Protocol reference & prior art
+
+There is no official spec — the protocol was reverse-engineered by the community. Before
+doing deep-path work, read these:
+
+- **icanos/hassio-plejd issue [#163 "Document Plejd BLE"](https://github.com/icanos/hassio-plejd/issues/163)**
+  — the de-facto protocol doc (command codes, message layout, device ids, button mapping,
+  time format), with the original reverse-engineer **@klali** contributing in the comments.
+- **`klali/ha-plejd`** (`custom_components/plejd/`) — the original Python implementation;
+  best reference for crypto/auth and the light-level state read. The crypto key is in the
+  Plejd app's `site.json` (`.PlejdMesh.CryptoKey`); output addresses in
+  `.PlejdMesh._outputAddresses`.
+- **`plejd/types/*.d.ts`** in this repo — the cloud API shapes are documented here.
+- This repo's `PlejdBLEHandler._encryptDecrypt()` / `_createChallengeResponse()` — the
+  AES auth/encrypt scheme (challenge-response with the crypto key).
+
+Concrete facts that are easy to get wrong (from #163 / @klali, not obvious from our code):
+
+- **Message layout:** `device id | command/request | command | data`.
+- **command/request prefix:** `0110` = command (no response), `0102` = read (request a
+  response). Match `BLE_REQUEST_NO_RESPONSE` / `BLE_REQUEST_RESPONSE` in `PlejdBLEHandler`.
+- **Commands are 2-byte big-endian** (`readUInt16BE(3)`): `0021` scene, `0097` state,
+  `0098` dim+state ("DIM2"), `00c8` dim+state ("DIM"), `0016` button, `001b` time.
+- **Special device ids:** `00` = broadcast (can set ALL lights at once with no delay —
+  also wireless buttons), `01` = time broadcast, `02` = scenes. Numeric `03-255` = real
+  BLE device id.
+- **Dim is 2-byte little-endian** (0–65535); HA only uses 1 byte. Max brightness needs
+  `ffff` — hence `sendCommand` writes `(brightness << 8) | brightness` but decode keeps
+  only the high byte.
+- **Time** is a 32-bit little-endian unix timestamp.
+- **Button data[0]:** WPH-01 `00..03` = the four buttons (`button_1..4`); WRT-01 `00` =
+  rotary (`button_1`).
+- **Reading current state on demand:** the `LIGHTLEVEL_UUID` (`31ba0003-…`) can be queried
+  to read current output state (≈10 bytes/output: `0`=id, `1`=state, `5-6`=dim LE). klali
+  implements this; **this add-on does not** — useful if a new device type needs explicit
+  state polling.
+
+---
+
 ## File map for device support
 
 | Concern | File / function |
