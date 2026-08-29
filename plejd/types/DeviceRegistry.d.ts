@@ -31,6 +31,7 @@ export interface InputDevice {
   name: string;
   input: number;
   roomId: string;
+  roomName: string | undefined;
   type: string;
   typeDescription: string;
   typeName: string;

@@ -6,11 +6,13 @@
 > Plejd hardware support and releases happen here. See
 > [FORK.md](https://github.com/oleost/hassio-plejd/blob/master/FORK.md).
 
-## [0.23.0-beta.1](https://github.com/oleost/hassio-plejd/tree/feat/graceful-device-fallback) (2026-08-29)
+## [0.23.0-beta.2](https://github.com/oleost/hassio-plejd/tree/feat/graceful-device-fallback) (2026-08-29)
 
 > Beta. Testable via the **Plejd (beta)** add-on. Please report what shows up (or
 > doesn't) in your setup — especially anything logged as "inferred" or "not yet
 > supported".
+>
+> beta.2 adds the unnamed-switch and double-discovery fixes below.
 
 **Changed:**
 
@@ -29,6 +31,17 @@
 - Dimmable detection now tests the `DIM` trait bit instead of matching exact
   `traits` values, so devices that set additional bits are read correctly. No
   change for any currently-known device.
+
+**Fixed:**
+
+- Wireless switches (WPH-01 etc.) that were left unnamed in the Plejd app showed
+  up in Home Assistant as an `undefined` device. They now fall back to the room
+  name, then to the model name.
+- Device discovery was published twice on startup (once into a not-yet-connected
+  MQTT client, once on connect). The premature send is removed and
+  `sendDiscoveryToHomeAssistant()` now no-ops until the client is connected —
+  also removes a potential `Cannot read property 'publish' of undefined` crash
+  (upstream #325).
 
 See [`docs/device-classification.md`](https://github.com/oleost/hassio-plejd/blob/master/docs/device-classification.md)
 for the full rationale and the `thomasloven/pyplejd` prior art this is based on.

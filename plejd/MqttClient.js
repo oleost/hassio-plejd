@@ -348,6 +348,14 @@ class MqttClient extends EventEmitter {
   }
 
   sendDiscoveryToHomeAssistant() {
+    if (!this.client || !this.client.connected) {
+      // Called before the broker connection is up (or during a reconnect). The
+      // `connected` event handler re-runs discovery once connected, so skip
+      // rather than publishing into a not-yet-connected client.
+      logger.verbose('Skipping discovery send - MQTT client not connected yet.');
+      return;
+    }
+
     // -------- DISCOVERY FOR OUTPUT DEVICES -------------
 
     const allOutputDevices = this.deviceRegistry.getAllOutputDevices();

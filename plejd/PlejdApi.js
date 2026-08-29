@@ -764,6 +764,9 @@ class PlejdApi {
 
           const uniqueInputId = this.deviceRegistry.getUniqueInputId(device.deviceId, input.input);
 
+          const inputRoom = this.siteDetails.rooms.find((x) => x.roomId === device.roomId);
+          const inputRoomName = inputRoom ? inputRoom.title : undefined;
+
           try {
             const decodedDeviceType =
               this._getDeviceType(plejdDevice) || this._inferDeviceType(device, plejdDevice, input);
@@ -775,13 +778,19 @@ class PlejdApi {
             }
 
             if (decodedDeviceType && decodedDeviceType.broadcastClicks) {
+              // Wireless switches (WPH-01 etc.) are often left unnamed in the Plejd
+              // app — only the loads they control get names. Fall back to the room,
+              // then to the model, so Home Assistant never shows an "undefined" device.
+              const inputName = device.title || inputRoomName || `Plejd ${decodedDeviceType.name}`;
+
               /** @type {import('types/DeviceRegistry').InputDevice} */
               const inputDevice = {
                 bleInputAddress,
                 deviceId: device.deviceId,
-                name: device.title,
+                name: inputName,
                 input: input.input,
                 roomId: device.roomId,
+                roomName: inputRoomName,
                 type: decodedDeviceType.type,
                 typeDescription: decodedDeviceType.description,
                 typeName: decodedDeviceType.name,

@@ -37,20 +37,23 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
       borrowed from `thomasloven/pyplejd`, which dropped its hw-id table entirely).
       Plain lights/relays/buttons with unknown ids now work automatically. Covers,
       thermostats and motion sensors are detected and logged as "not yet supported"
-      then skipped. Shipped in **`0.23.0-beta.1`** (branch `feat/graceful-device-fallback`,
-      built via workflow_dispatch, run 33251683297). Rationale +
-      `pyplejd` command-code notes in `docs/device-classification.md`. When confirmed:
-      merge → master, cut stable `0.23.0`. This makes most future "unknown hardware id"
-      reports non-issues.
+      then skipped. Branch `feat/graceful-device-fallback`; rationale + `pyplejd`
+      command-code notes in `docs/device-classification.md`. beta.2 folds in the #325
+      discovery fix and the unnamed-switch fix below. When confirmed: merge → master,
+      cut stable `0.23.0`. This makes most future "unknown hardware id" reports
+      non-issues.
 
 ## P1 — Real bugs, broad impact, clear fix
 
-- [ ] **#325 — `Cannot read property 'publish' of undefined` on eager discovery.**
-      Discovery is sent before the MQTT client is connected, then again after connect.
-      Likely an init-order/race bug. Check the eager `sendDiscoveryToHomeAssistant()`
-      call in `plejd/PlejdAddon.init()` (runs before `mqttClient.init()`) and the
-      publish path around `plejd/MqttClient.js`. Our fork has the same pattern, so it
-      may still be present — verify before fixing.
+- [~] **#325 — `Cannot read property 'publish' of undefined` on eager discovery.**
+      Confirmed the pattern in our fork: `PlejdAddon.init()` called
+      `sendDiscoveryToHomeAssistant()` right after `mqttClient.init()`, before the
+      broker connection was up — publishing into a not-yet-connected client and
+      duplicating every discovery message (seen in a real 0.23.0-beta.1 startup log).
+      Fixed on branch `feat/graceful-device-fallback` (0.23.0-beta.2): removed the
+      premature call; `sendDiscoveryToHomeAssistant()` now no-ops unless
+      `this.client.connected`. Discovery still fires from the `connected` handler and
+      on every HA birth message. Ships with the graceful-fallback beta.
 
 ## P2 — Real logic bugs, more nuanced
 
@@ -72,6 +75,13 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
       `plejd/Scene.js`.
 
 ## P3 — Real but cosmetic / log-noise only
+
+- [~] **Unnamed wireless switches show as `undefined` device in HA.** WPH-01s left
+      unnamed in the Plejd app (only their loads are named) produced
+      `device.name = undefined` in the MQTT discovery payload. Fixed on
+      `feat/graceful-device-fallback` (0.23.0-beta.2): `name` falls back to the room
+      title, then `Plejd <model>`. `InputDevice` gained a `roomName` field. Seen in a
+      real user log; related to but not the same as #326/#327.
 
 - [ ] **#327 — Input devices logged as `null` in verbose logs.**
       Pinpointed by reporter: `PlejdBLEHandler.js` (~line 875-877) uses
