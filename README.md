@@ -6,7 +6,16 @@ This is an add-on **repository** that you add to the Home Assistant Add-on Store
 
 ## This fork
 
-This is a fork of [icanos/hassio-plejd](https://github.com/icanos/hassio-plejd) that improves how Plejd **scenes** integrate with Home Assistant. Everything else (lights, switches, relays, button/rotary inputs, MQTT auto-discovery, app→HA notifications) works the same as upstream.
+**Upstream ([icanos/hassio-plejd](https://github.com/icanos/hassio-plejd)) is no longer
+maintained** — it has had no releases or meaningful activity for a long time. This
+repository is the actively maintained continuation: bug fixes, new Plejd hardware
+support, and regular releases happen here. If you are running the upstream add-on, this
+is the fork to move to. See [FORK.md](FORK.md) for the background and what "maintained"
+means in practice.
+
+It started as a fork focused on how Plejd **scenes** integrate with Home Assistant;
+everything else (lights, switches, relays, button/rotary inputs, MQTT auto-discovery,
+app→HA notifications) still works the same as upstream did.
 
 What this fork adds/changes compared to upstream:
 
@@ -16,8 +25,8 @@ What this fork adds/changes compared to upstream:
 - **No more ghost scene activations on startup.** Retained MQTT `SET` messages for scenes are ignored (and cleared) on startup, so a scene is not accidentally re-triggered when the add-on restarts. This guard only applies to scenes — retained commands for lights/switches are still honored.
 - **Scene "Activate" button stays available.** The scene availability message is now retained, so the activate button does not disappear after a restart.
 
-This fork tracks upstream and carries the scene-related changes above, plus a
-pre-built image pipeline (see the add-on [changelog](plejd/CHANGELOG.md)).
+This fork carries the scene-related changes above, plus a pre-built image pipeline and
+ongoing fixes/device support (see the add-on [changelog](plejd/CHANGELOG.md)).
 
 ## Requirements
 

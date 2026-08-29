@@ -2,7 +2,7 @@
 
 Home Assistant add-on for [Plejd](https://www.plejd.com/) home automation devices. Control your Plejd lights, switches and relays from Home Assistant over Bluetooth (BLE), with MQTT auto-discovery of the devices in range. Changes made in the Plejd app are propagated back to Home Assistant.
 
-This is a maintained fork. For requirements, installation and what this fork changes, see the [repository README](../README.md). The document below covers configuration, supported devices, usage and troubleshooting once the add-on is installed.
+This is the actively maintained fork of [icanos/hassio-plejd](https://github.com/icanos/hassio-plejd), which is no longer maintained upstream. For requirements, installation, the fork background and what it changes, see the [repository README](../README.md) and [FORK.md](../FORK.md). The document below covers configuration, supported devices, usage and troubleshooting once the add-on is installed.
 
 Disclaimer: I am in no way affiliated with Plejd and am doing this solely as a hobby project.
 

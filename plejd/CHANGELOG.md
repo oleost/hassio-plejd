@@ -1,9 +1,19 @@
 # Changelog hassio-plejd Home Assistant Plejd addon
 
 > This is the [oleost fork](https://github.com/oleost/hassio-plejd) of
-> [icanos/hassio-plejd](https://github.com/icanos/hassio-plejd). It tracks
-> upstream and adds scene-related improvements (see entries below). Everything
-> else works the same as upstream.
+> [icanos/hassio-plejd](https://github.com/icanos/hassio-plejd), which is no longer
+> maintained upstream. This fork is the actively maintained continuation — fixes, new
+> Plejd hardware support and releases happen here. See
+> [FORK.md](https://github.com/oleost/hassio-plejd/blob/master/FORK.md).
+
+## [Unreleased]
+
+**Changed:**
+
+- This fork is now the actively maintained continuation of the (dormant) upstream
+  project. Development, bug triage (see `TODO.md`) and releases happen here going
+  forward. A **Plejd (beta)** add-on provides a channel for testing unreleased
+  changes before they ship to the stable add-on.
 
 ## [0.21.0](https://github.com/oleost/hassio-plejd/tree/0.21.0) (2026-06-18)
 
