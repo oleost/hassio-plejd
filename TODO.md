@@ -76,16 +76,30 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
 
 ## P3 — Real but cosmetic / log-noise only
 
-- [~] **Wireless-switch (WPH-01) naming.** When Plejd returns no title for a switch,
-      the input branch produced `name: undefined` in the discovery `device` block.
-      Confirmed via a real user's MQTT Info: the `device` block has no `name` key, yet
-      HA still shows a good name — HA keeps the name from an earlier add-on run.
-      `feat/graceful-device-fallback` (0.23.0-beta.3): (a) look for a title on any
-      other `devices[]` entry for the same deviceId first (pyplejd does this), (b) if
-      still none, leave discovery `name` unset so HA keeps its existing name (don't
-      substitute room name — beta.2 did that briefly and it would overwrite good
-      names). `InputDevice` gained `roomName`; trigger device block now sends
-      `suggested_area`. Related to but not the same as #326/#327.
+- [x] **Wireless-switch (WPH-01) naming.** The input branch produced `name: undefined`
+      in the discovery `device` block. **Root cause (confirmed from a real user's
+      verbose log):** Plejd's cloud API returns Device objects *without a `title` key
+      at all* for input-only devices in that site — output devices all have titles,
+      the WPH-01 entries don't (`No outputSettings found for undefined (E7BC883987E6)`
+      — the `undefined` is `device.title`). Only one `devices[]` entry per WPH-01, so
+      no sibling to recover a title from. Upstream / pyplejd / hass-plejd all read
+      only `device.title` too — they would all show these nameless. The good names HA
+      shows for this user are **residual** from an earlier add-on run. Fixed on
+      `feat/graceful-device-fallback` (0.23.0-beta.3): when there is no title, leave
+      the discovery `name` unset so HA keeps whatever it has (do NOT substitute the
+      room name — beta.2 did briefly and it would overwrite good residual names). The
+      `devices[]` sibling-title lookup added as a best effort finds nothing here and
+      falls through harmlessly. `InputDevice` gained `roomName`; the trigger device
+      block now also sends `suggested_area`. Related to but not the same as #326/#327.
+
+- [ ] **`Command 101 unknown` = `0x0101` tunable-white colortemp report, not decoded.**
+      Seen in a real user's verbose log from DWN-01 downlights (tunable white):
+      `4d01030101b80b` etc. decode to `cmd 0x0101` which `_onLastDataUpdated` doesn't
+      handle (only `0x0420` colortemp). pyplejd calls this
+      `CMD_TUNABLE_WHITE_TEMPERATURE = 0x0101`. Consequence: Home Assistant never gets
+      live colour-temperature state from these lights (setting still works). Add a
+      branch in `PlejdBLEHandler._onLastDataUpdated` for `0x0101`. Low priority,
+      pre-existing, independent of the fallback work.
 
 - [ ] **#327 — Input devices logged as `null` in verbose logs.**
       Pinpointed by reporter: `PlejdBLEHandler.js` (~line 875-877) uses
