@@ -22,18 +22,20 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
 
 ---
 
-## P1 — Real bugs, broad impact, clear fix
+## Resolved / not pursuing (continued)
 
-- [~] **#339 / #338 / #332 / #337 — Unknown device hardware id `42`, `38`, `24`.**
-      Newer hardware revisions report ids not mapped in the device-type lookup. Same
-      root cause for all four — fixed together in `plejd/PlejdApi.js` on branch
-      `fix/hardware-id-mappings`, shipped in beta `0.22.0-beta.1`. Test status:
-      - `24` = DIM-02-LC2 (firmware 6.43.3, output) — **confirmed working** by the #337
-        reporter on the beta. ("Randomly turns on" symptom not raised again.)
-      - `38` = WPH-01-LC (`wph-01-lc-v4.41.3`, "2024Q3 Release", input) — awaiting tester feedback.
-      - `42` = WRT-01 (wireless rotary, input) — awaiting tester feedback.
-      Original symptom: `Error trying to create {input,output} device: Unknown device type with hardware id N`.
-      When 38 + 42 are confirmed: merge branch → master, cut stable 0.22.0, mark this done.
+- [x] **#339 / #338 / #332 / #337 — Unknown device hardware id `42`, `38`, `24`.**
+      Newer hardware revisions reported ids not mapped in the device-type lookup.
+      Fixed together in `plejd/PlejdApi.js` (`_getDeviceType` cases 24/38/42), shipped
+      in **stable 0.22.0** (2026-08-29).
+      - `24` = DIM-02-LC2 (firmware 6.43.3, output) — confirmed working by the #337
+        reporter on the beta.
+      - `38` = WPH-01-LC (`wph-01-lc-v4.41.3`, "2024Q3 Release", input) and
+        `42` = WRT-01 (wireless rotary, input) — shipped to stable unconfirmed, with a
+        "feedback welcome" note in the changelog and README. Recognition-only change,
+        no risk to other devices. Reopen only if a reporter says it still fails.
+
+## P1 — Real bugs, broad impact, clear fix
 
 - [ ] **#325 — `Cannot read property 'publish' of undefined` on eager discovery.**
       Discovery is sent before the MQTT client is connected, then again after connect.

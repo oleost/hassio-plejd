@@ -62,7 +62,7 @@ Plejd output devices typically appears as either lights or switches in Home Assi
 | DAL-01    | Light                    | Dali broadcast with dimmer and tuneable white support                                                                                  |
 | DIM-01    | Light                    | 1-channel dimmer LED, 300 VA (Original, LC and LC2 hardware versions)                                                                  |
 | DIM-01-2P | Light                    | 1-channel dimmer LED with 2-pole breaking, 300 VA                                                                                      |
-| DIM-02    | Light                    | 2-channel dimmer LED, 2\*100 VA (Original and LC hardware versions)                                                                    |
+| DIM-02    | Light                    | 2-channel dimmer LED, 2\*100 VA (Original, LC and LC2 hardware versions)                                                               |
 | DWN-01    | Light                    | Smart tunable downlight with a built-in dimmer function, 8W                                                                            |
 | DWN-02    | Light                    | Smart tunable downlight with a built-in dimmer function, 8W                                                                            |
 | EXT-01    | Extender                 | Plejd mesh extender and battery backup                                                                                                 |
@@ -75,11 +75,17 @@ Plejd output devices typically appears as either lights or switches in Home Assi
 | RTR-01    | -                        | -                                                                                                                                      |
 | SPD-01    | Light                    | Smart plug with dimming capability, trailing edge                                                                                      |
 | SPR-01    | Light, Switch            | Smart plug on/off with relay, 3500 VA (Relay, Light, Other)                                                                            |
-| WPH-01    | Device Automation        | Wireless push button, 4 buttons. 2 channels, on/off per channel, type:button_short_press, subtype:button_1, button_2,button_3,button_4 |
-| WRT-01    | Device Automation        | Wireless rotary button, type:button_short_press, subtype:button_1                                                                      |
+| WPH-01    | Device Automation        | Wireless push button, 4 buttons. 2 channels, on/off per channel, type:button_short_press, subtype:button_1, button_2,button_3,button_4. LC hardware revision ⚠️ |
+| WRT-01    | Device Automation        | Wireless rotary button, type:button_short_press, subtype:button_1. Newer hardware revision ⚠️                                          |
 | GWY-01    | Sensor                   | Gateway to enable control via internet and integrations                                                                                |
 | Scene     | Scene, Device Automation | type:scene, subtype:trigger                                                                                                            |
 | Room      | Area, Light              | Can be changed by Home Assistant, If includeRoomsAsLights is set to true                                                               |
+
+⚠️ = a newer hardware revision was added to the device-type lookup from user reports
+but has **not yet been confirmed by a tester**. It should behave exactly like the
+original (recognition-only change). If yours misbehaves, please
+[open an issue](https://github.com/oleost/hassio-plejd/issues) with the hardware id
+and a debug log — feedback is very welcome.
 
 ## Transitions
 

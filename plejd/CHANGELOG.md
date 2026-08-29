@@ -6,7 +6,26 @@
 > Plejd hardware support and releases happen here. See
 > [FORK.md](https://github.com/oleost/hassio-plejd/blob/master/FORK.md).
 
-## [Unreleased]
+## [0.22.0](https://github.com/oleost/hassio-plejd/tree/0.22.0) (2026-08-29)
+
+**Fixed:**
+
+- Recognize newer hardware revisions that previously failed on startup with
+  "Unknown device type with hardware id N" and never appeared in Home Assistant:
+  - `24` = DIM-02 ("LC2" hardware version), output/light — **confirmed working**
+    by a tester on the beta
+    ([#337](https://github.com/icanos/hassio-plejd/issues/337))
+  - `38` = WPH-01-LC, input/device automation — added from user reports,
+    **not yet confirmed by a tester; feedback welcome**
+    ([#338](https://github.com/icanos/hassio-plejd/issues/338),
+    [#332](https://github.com/icanos/hassio-plejd/issues/332))
+  - `42` = WRT-01 (newer hardware version), input/device automation — added from
+    a user report, **not yet confirmed by a tester; feedback welcome**
+    ([#339](https://github.com/icanos/hassio-plejd/issues/339))
+
+  These are recognition-only mappings: the devices behave exactly like the
+  existing DIM-02 / WPH-01 / WRT-01, so no other device is affected. If a mapped
+  device misbehaves, please open an issue with the hardware id and a debug log.
 
 **Changed:**
 
