@@ -22,6 +22,31 @@ const TRAITS = {
   DIMMABLE_COLORTEMP: 15, // 0b1111
 };
 
+// `device.traits` is a bitfield, not an enum. The TRAITS values above are the
+// specific combinations Plejd's own lights report; TRAIT_BITS lets us test a
+// single capability with a bitwise AND, which also works for covers/thermostats
+// and any future device that sets extra bits. Bit layout matches
+// thomasloven/pyplejd (PlejdTraits).
+const TRAIT_BITS = {
+  POWER: 0x1, // powerable (on/off load)
+  DIM: 0x2, // dimmable
+  TEMP: 0x4, // tunable white
+  GROUP: 0x8, // groupable
+  COVER: 0x10, // coverable (blinds/shades)
+  CLIMATE: 0x20, // climate/thermostat
+  TILT: 0x40, // cover tilt
+  CLIMATE_PWM: 0x80,
+};
+
+// InputSetting.buttonType values that represent a physical button/rotary we can
+// expose as a Home Assistant device automation. "Scene" and unknown types are
+// not exposed. Matches thomasloven/pyplejd input handling.
+const PHYSICAL_BUTTON_TYPES = ['PushButton', 'DirectionUp', 'DirectionDown', 'RotateMesh'];
+
+/** True if `bit` is set in the (possibly string) bitfield `value`. */
+// eslint-disable-next-line no-bitwise
+const hasTrait = (value, bit) => ((parseInt(value, 10) || 0) & bit) === bit;
+
 const logger = Logger.getLogger('plejd-api');
 
 class PlejdApi {
@@ -249,6 +274,17 @@ class PlejdApi {
     });
   }
 
+  /**
+   * Map a known Plejd `hardwareId` to a device type descriptor.
+   *
+   * Returns `null` for an unrecognized hardware id — the caller then falls back
+   * to `_inferDeviceType()`, which derives the type from `device.traits` /
+   * `device.outputType` / `inputSetting.buttonType` instead. This used to throw;
+   * see `docs/device-classification.md` for the rationale.
+   *
+   * @returns {{name: string, description: string, type: string, dimmable?: boolean,
+   *   colorTemp?: boolean, broadcastClicks: boolean} | null}
+   */
   // eslint-disable-next-line class-methods-use-this
   _getDeviceType(plejdDevice) {
     // Type name is also sometimes available in device.hardware.name
@@ -478,20 +514,101 @@ class PlejdApi {
           colorTemp: true,
           broadcastClicks: false,
         };
-      // PLEASE CREATE AN ISSUE WITH THE HARDWARE ID if you own one of these devices!
-      // case
-      //   return {
-      //     name: 'OUT-01',
-      //     description: 'Outdoor wall light with built-in LED, 2x5W',
-      //     type: 'light',
-      //     dimmable: true,
-      //     broadcastClicks: false,
-      //   };
+      // Unrecognized hardware id. Don't throw — let the caller infer the type
+      // from device traits / outputType. If it's a plain light/relay/button it
+      // will still work; please open an issue with the hardware id so it can be
+      // added explicitly here (nicer name + description).
       default:
-        throw new Error(
-          `Unknown device type with hardware id ${plejdDevice.hardwareId}. --- PLEASE POST THIS AND THE NEXT LOG ROWS to https://github.com/icanos/hassio-plejd/issues/ --- `,
-        );
+        return null;
     }
+  }
+
+  /**
+   * Derive a device type descriptor for a device whose `hardwareId` is not in
+   * `_getDeviceType()`. Uses structured fields from the cloud API rather than a
+   * lookup table:
+   *   - inputs: `inputSetting.buttonType`
+   *   - outputs: `device.outputType` + `device.traits` bitfield
+   *
+   * A descriptor with `unsupported` set means the device was recognized but this
+   * add-on has no handler for that category yet (cover/thermostat/motion) — the
+   * caller logs it and skips it rather than creating a broken entity.
+   *
+   * @returns {{name: string, description: string, type: string, dimmable?: boolean,
+   *   colorTemp?: boolean, broadcastClicks?: boolean, inferred: true,
+   *   unsupported?: string} | null}
+   */
+  // eslint-disable-next-line class-methods-use-this
+  _inferDeviceType(device, plejdDevice, inputSetting) {
+    const { traits } = device;
+    const hardwareId = plejdDevice ? plejdDevice.hardwareId : 'unknown';
+    const notes = plejdDevice && plejdDevice.firmware ? plejdDevice.firmware.notes : null;
+
+    // Plejd's firmware notes start with the model, e.g. "wph-01-lc-v4.41.3 ...".
+    let name = `Unknown (hardware id ${hardwareId})`;
+    if (notes && typeof notes === 'string' && notes.trim()) {
+      name = notes.trim().split(/\s+/)[0];
+    }
+
+    // --- Input device (button / rotary) ---
+    if (inputSetting) {
+      if (PHYSICAL_BUTTON_TYPES.includes(inputSetting.buttonType)) {
+        return {
+          name,
+          description: `Wireless button (inferred from buttonType=${inputSetting.buttonType}, hardware id ${hardwareId})`,
+          type: 'device_automation',
+          dimmable: false,
+          broadcastClicks: true,
+          inferred: true,
+        };
+      }
+      // "Scene" buttons and unknown/empty button types are not exposed.
+      return null;
+    }
+
+    // --- Output device ---
+    if (hasTrait(traits, TRAIT_BITS.CLIMATE) || device.outputType === 'CLIMATE') {
+      return {
+        name,
+        description: `Thermostat (hardware id ${hardwareId})`,
+        type: 'climate',
+        inferred: true,
+        unsupported: 'thermostat',
+      };
+    }
+    if (hasTrait(traits, TRAIT_BITS.COVER) || device.outputType === 'COVERABLE') {
+      return {
+        name,
+        description: `Cover / blind (hardware id ${hardwareId})`,
+        type: 'cover',
+        inferred: true,
+        unsupported: 'cover',
+      };
+    }
+    if (device.outputType === 'RELAY') {
+      return {
+        name,
+        description: `Relay (inferred, hardware id ${hardwareId})`,
+        type: DEVICE_TYPES.SWITCH,
+        dimmable: false,
+        broadcastClicks: false,
+        inferred: true,
+      };
+    }
+    if (device.outputType === 'LIGHT' || hasTrait(traits, TRAIT_BITS.POWER)) {
+      const dimmable = hasTrait(traits, TRAIT_BITS.DIM);
+      return {
+        name,
+        description: `${dimmable ? 'Dimmable light' : 'Light'} (inferred, hardware id ${hardwareId})`,
+        type: 'light',
+        dimmable,
+        colorTemp: hasTrait(traits, TRAIT_BITS.TEMP),
+        broadcastClicks: false,
+        inferred: true,
+      };
+    }
+
+    return null;
   }
 
   /**
@@ -545,8 +662,10 @@ class PlejdApi {
             (x) => x.deviceId === device.deviceId,
           );
 
-          const dimmable =
-            device.traits === TRAITS.DIMMABLE || device.traits === TRAITS.DIMMABLE_COLORTEMP;
+          // `device.traits` is a bitfield — test the DIM bit rather than matching
+          // exact combinations, so covers/thermostats/future devices don't slip
+          // through as "not dimmable" by accident.
+          const dimmable = hasTrait(device.traits, TRAIT_BITS.DIM);
 
           // Alternate approach looks at outputSettings.dimCurve and outputSettings.predefinedLoad
           // 1. outputSettings.dimCurve === null: Not dimmable
@@ -554,7 +673,32 @@ class PlejdApi {
           // 3. outputSettings.predefinedLoad !== null && outputSettings.predefinedLoad.loadType === "DWN": Dimmable
 
           try {
-            const decodedDeviceType = this._getDeviceType(plejdDevice);
+            const decodedDeviceType =
+              this._getDeviceType(plejdDevice) || this._inferDeviceType(device, plejdDevice, null);
+
+            if (!decodedDeviceType) {
+              logger.warn(
+                `Could not determine a device type for output device ${device.title} (hardware id ${plejdDevice.hardwareId}). Skipping it. --- PLEASE OPEN AN ISSUE at https://github.com/oleost/hassio-plejd/issues/ WITH THIS AND THE NEXT LOG ROWS ---`,
+              );
+              logger.warn(`device (from API response): ${JSON.stringify(device, null, 2)}`);
+              logger.warn(
+                `plejdDevice (from API response): ${JSON.stringify(plejdDevice, null, 2)}`,
+              );
+              return;
+            }
+
+            if (decodedDeviceType.unsupported) {
+              logger.warn(
+                `Device ${device.title} (hardware id ${plejdDevice.hardwareId}) is a ${decodedDeviceType.unsupported}. It is recognized but not yet supported by this add-on and will be skipped for now — it will appear automatically once ${decodedDeviceType.unsupported} support is added. Track/nudge at https://github.com/oleost/hassio-plejd/issues/`,
+              );
+              return;
+            }
+
+            if (decodedDeviceType.inferred) {
+              logger.warn(
+                `Hardware id ${plejdDevice.hardwareId} (${device.title}) is not explicitly mapped; treating it as a ${decodedDeviceType.type} (dimmable=${!!decodedDeviceType.dimmable}) based on device traits/outputType. Please open an issue at https://github.com/oleost/hassio-plejd/issues/ with this hardware id so it can be added explicitly.`,
+              );
+            }
 
             let loadType = decodedDeviceType.type;
             if (device.outputType === 'RELAY') {
@@ -621,9 +765,16 @@ class PlejdApi {
           const uniqueInputId = this.deviceRegistry.getUniqueInputId(device.deviceId, input.input);
 
           try {
-            const decodedDeviceType = this._getDeviceType(plejdDevice);
+            const decodedDeviceType =
+              this._getDeviceType(plejdDevice) || this._inferDeviceType(device, plejdDevice, input);
 
-            if (decodedDeviceType.broadcastClicks) {
+            if (decodedDeviceType && decodedDeviceType.inferred) {
+              logger.warn(
+                `Input device hardware id ${plejdDevice.hardwareId} (${device.title}) is not explicitly mapped; exposing input ${input.input} as a device automation based on buttonType=${input.buttonType}. Please open an issue at https://github.com/oleost/hassio-plejd/issues/ with this hardware id.`,
+              );
+            }
+
+            if (decodedDeviceType && decodedDeviceType.broadcastClicks) {
               /** @type {import('types/DeviceRegistry').InputDevice} */
               const inputDevice = {
                 bleInputAddress,
@@ -638,6 +789,10 @@ class PlejdApi {
                 uniqueId: uniqueInputId,
               };
               this.deviceRegistry.addInputDevice(inputDevice);
+            } else if (!decodedDeviceType) {
+              logger.verbose(
+                `Input ${input.input} on ${device.title} (hardware id ${plejdDevice.hardwareId}, buttonType=${input.buttonType}) is not a physical button and will not be exposed.`,
+              );
             }
           } catch (error) {
             logger.error(`Error trying to create input device: ${error}`);

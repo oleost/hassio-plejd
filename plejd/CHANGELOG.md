@@ -6,6 +6,33 @@
 > Plejd hardware support and releases happen here. See
 > [FORK.md](https://github.com/oleost/hassio-plejd/blob/master/FORK.md).
 
+## [0.23.0-beta.1](https://github.com/oleost/hassio-plejd/tree/feat/graceful-device-fallback) (2026-08-29)
+
+> Beta. Testable via the **Plejd (beta)** add-on. Please report what shows up (or
+> doesn't) in your setup — especially anything logged as "inferred" or "not yet
+> supported".
+
+**Changed:**
+
+- **Unrecognized hardware ids no longer disappear.** `_getDeviceType()` used to
+  throw on any hardware id not in its lookup table, and the device was silently
+  skipped. It now falls back to `_inferDeviceType()`, which classifies the device
+  from the cloud API's structured fields — `device.outputType`, the
+  `device.traits` bitfield, and `inputSetting.buttonType` — instead of a lookup
+  table. A plain light / relay / wireless button with an unmapped id now works
+  automatically (logged as "inferred"; please still open an issue with the id so
+  it can get a proper name).
+- Covers/blinds, thermostats and motion sensors are now **recognized** (via
+  traits / `outputType`) and logged clearly as "not yet supported — will appear
+  automatically once support is added", instead of throwing an "Unknown device
+  type" error. Control for those categories is still future work.
+- Dimmable detection now tests the `DIM` trait bit instead of matching exact
+  `traits` values, so devices that set additional bits are read correctly. No
+  change for any currently-known device.
+
+See [`docs/device-classification.md`](https://github.com/oleost/hassio-plejd/blob/master/docs/device-classification.md)
+for the full rationale and the `thomasloven/pyplejd` prior art this is based on.
+
 ## [0.22.0](https://github.com/oleost/hassio-plejd/tree/0.22.0) (2026-08-29)
 
 **Fixed:**
