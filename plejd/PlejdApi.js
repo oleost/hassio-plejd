@@ -767,27 +767,39 @@ class PlejdApi {
           const inputRoom = this.siteDetails.rooms.find((x) => x.roomId === device.roomId);
           const inputRoomName = inputRoom ? inputRoom.title : undefined;
 
+          // A wireless switch can show up as several `devices[]` entries for one
+          // deviceId; only some carry the title the user set in the Plejd app.
+          // Prefer any entry that has a title (matches thomasloven/pyplejd).
+          const titledEntry = this.siteDetails.devices.find(
+            (x) => x.deviceId === device.deviceId && x.title,
+          );
+          const inputTitle = titledEntry ? titledEntry.title : device.title;
+
           try {
             const decodedDeviceType =
               this._getDeviceType(plejdDevice) || this._inferDeviceType(device, plejdDevice, input);
 
             if (decodedDeviceType && decodedDeviceType.inferred) {
               logger.warn(
-                `Input device hardware id ${plejdDevice.hardwareId} (${device.title}) is not explicitly mapped; exposing input ${input.input} as a device automation based on buttonType=${input.buttonType}. Please open an issue at https://github.com/oleost/hassio-plejd/issues/ with this hardware id.`,
+                `Input device hardware id ${plejdDevice.hardwareId} (${inputTitle}) is not explicitly mapped; exposing input ${input.input} as a device automation based on buttonType=${input.buttonType}. Please open an issue at https://github.com/oleost/hassio-plejd/issues/ with this hardware id.`,
               );
             }
 
             if (decodedDeviceType && decodedDeviceType.broadcastClicks) {
-              // Wireless switches (WPH-01 etc.) are often left unnamed in the Plejd
-              // app — only the loads they control get names. Fall back to the room,
-              // then to the model, so Home Assistant never shows an "undefined" device.
-              const inputName = device.title || inputRoomName || `Plejd ${decodedDeviceType.name}`;
+              if (!inputTitle) {
+                // No name from Plejd — leave it unset so Home Assistant keeps any
+                // name it already has for this device (renaming the switch in the
+                // Plejd app is how to give it one).
+                logger.verbose(
+                  `Input device ${device.deviceId} (${decodedDeviceType.name}) has no name set in the Plejd app; leaving discovery name unset.`,
+                );
+              }
 
               /** @type {import('types/DeviceRegistry').InputDevice} */
               const inputDevice = {
                 bleInputAddress,
                 deviceId: device.deviceId,
-                name: inputName,
+                name: inputTitle || undefined,
                 input: input.input,
                 roomId: device.roomId,
                 roomName: inputRoomName,
@@ -800,7 +812,7 @@ class PlejdApi {
               this.deviceRegistry.addInputDevice(inputDevice);
             } else if (!decodedDeviceType) {
               logger.verbose(
-                `Input ${input.input} on ${device.title} (hardware id ${plejdDevice.hardwareId}, buttonType=${input.buttonType}) is not a physical button and will not be exposed.`,
+                `Input ${input.input} on ${inputTitle || device.deviceId} (hardware id ${plejdDevice.hardwareId}, buttonType=${input.buttonType}) is not a physical button and will not be exposed.`,
               );
             }
           } catch (error) {

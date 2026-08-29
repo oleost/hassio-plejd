@@ -28,7 +28,7 @@ export type InputDevices = { [deviceIdAndOutput: string]: InputDevice };
 export interface InputDevice {
   bleInputAddress: number;
   deviceId: string;
-  name: string;
+  name: string | undefined;
   input: number;
   roomId: string;
   roomName: string | undefined;

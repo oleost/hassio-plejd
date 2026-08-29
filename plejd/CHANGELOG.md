@@ -6,13 +6,13 @@
 > Plejd hardware support and releases happen here. See
 > [FORK.md](https://github.com/oleost/hassio-plejd/blob/master/FORK.md).
 
-## [0.23.0-beta.2](https://github.com/oleost/hassio-plejd/tree/feat/graceful-device-fallback) (2026-08-29)
+## [0.23.0-beta.3](https://github.com/oleost/hassio-plejd/tree/feat/graceful-device-fallback) (2026-08-29)
 
 > Beta. Testable via the **Plejd (beta)** add-on. Please report what shows up (or
 > doesn't) in your setup — especially anything logged as "inferred" or "not yet
-> supported".
+> supported", and whether any device got **renamed**.
 >
-> beta.2 adds the unnamed-switch and double-discovery fixes below.
+> beta.3 reworks the switch-naming fix (see below) and adds the double-discovery fix.
 
 **Changed:**
 
@@ -34,9 +34,13 @@
 
 **Fixed:**
 
-- Wireless switches (WPH-01 etc.) that were left unnamed in the Plejd app showed
-  up in Home Assistant as an `undefined` device. They now fall back to the room
-  name, then to the model name.
+- Wireless switch (WPH-01 etc.) naming. When Plejd gives no name for a switch, the
+  add-on now (a) looks for the name on any other `devices[]` entry for the same
+  device before giving up, and (b) leaves the discovery `name` unset rather than
+  sending an empty one — so Home Assistant keeps the name it already has instead
+  of the device showing as `undefined`. The trigger device block also carries a
+  `suggested_area` from the Plejd room now. (beta.2 briefly substituted the room
+  name here, which would have *overwritten* good existing names — reverted.)
 - Device discovery was published twice on startup (once into a not-yet-connected
   MQTT client, once on connect). The premature send is removed and
   `sendDiscoveryToHomeAssistant()` now no-ops until the client is connected —

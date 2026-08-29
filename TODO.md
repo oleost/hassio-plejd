@@ -38,7 +38,7 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
       Plain lights/relays/buttons with unknown ids now work automatically. Covers,
       thermostats and motion sensors are detected and logged as "not yet supported"
       then skipped. Branch `feat/graceful-device-fallback`; rationale + `pyplejd`
-      command-code notes in `docs/device-classification.md`. beta.2 folds in the #325
+      command-code notes in `docs/device-classification.md`. beta.2-3 fold in the #325
       discovery fix and the unnamed-switch fix below. When confirmed: merge → master,
       cut stable `0.23.0`. This makes most future "unknown hardware id" reports
       non-issues.
@@ -50,7 +50,7 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
       `sendDiscoveryToHomeAssistant()` right after `mqttClient.init()`, before the
       broker connection was up — publishing into a not-yet-connected client and
       duplicating every discovery message (seen in a real 0.23.0-beta.1 startup log).
-      Fixed on branch `feat/graceful-device-fallback` (0.23.0-beta.2): removed the
+      Fixed on `feat/graceful-device-fallback` (since 0.23.0-beta.2): removed the
       premature call; `sendDiscoveryToHomeAssistant()` now no-ops unless
       `this.client.connected`. Discovery still fires from the `connected` handler and
       on every HA birth message. Ships with the graceful-fallback beta.
@@ -76,12 +76,16 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
 
 ## P3 — Real but cosmetic / log-noise only
 
-- [~] **Unnamed wireless switches show as `undefined` device in HA.** WPH-01s left
-      unnamed in the Plejd app (only their loads are named) produced
-      `device.name = undefined` in the MQTT discovery payload. Fixed on
-      `feat/graceful-device-fallback` (0.23.0-beta.2): `name` falls back to the room
-      title, then `Plejd <model>`. `InputDevice` gained a `roomName` field. Seen in a
-      real user log; related to but not the same as #326/#327.
+- [~] **Wireless-switch (WPH-01) naming.** When Plejd returns no title for a switch,
+      the input branch produced `name: undefined` in the discovery `device` block.
+      Confirmed via a real user's MQTT Info: the `device` block has no `name` key, yet
+      HA still shows a good name — HA keeps the name from an earlier add-on run.
+      `feat/graceful-device-fallback` (0.23.0-beta.3): (a) look for a title on any
+      other `devices[]` entry for the same deviceId first (pyplejd does this), (b) if
+      still none, leave discovery `name` unset so HA keeps its existing name (don't
+      substitute room name — beta.2 did that briefly and it would overwrite good
+      names). `InputDevice` gained `roomName`; trigger device block now sends
+      `suggested_area`. Related to but not the same as #326/#327.
 
 - [ ] **#327 — Input devices logged as `null` in verbose logs.**
       Pinpointed by reporter: `PlejdBLEHandler.js` (~line 875-877) uses
