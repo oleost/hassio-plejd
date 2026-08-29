@@ -76,21 +76,24 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
 
 ## P3 — Real but cosmetic / log-noise only
 
-- [x] **Wireless-switch (WPH-01) naming.** The input branch produced `name: undefined`
-      in the discovery `device` block. **Root cause (confirmed from a real user's
-      verbose log):** Plejd's cloud API returns Device objects *without a `title` key
-      at all* for input-only devices in that site — output devices all have titles,
-      the WPH-01 entries don't (`No outputSettings found for undefined (E7BC883987E6)`
-      — the `undefined` is `device.title`). Only one `devices[]` entry per WPH-01, so
-      no sibling to recover a title from. Upstream / pyplejd / hass-plejd all read
-      only `device.title` too — they would all show these nameless. The good names HA
-      shows for this user are **residual** from an earlier add-on run. Fixed on
-      `feat/graceful-device-fallback` (0.23.0-beta.3): when there is no title, leave
-      the discovery `name` unset so HA keeps whatever it has (do NOT substitute the
-      room name — beta.2 did briefly and it would overwrite good residual names). The
-      `devices[]` sibling-title lookup added as a best effort finds nothing here and
-      falls through harmlessly. `InputDevice` gained `roomName`; the trigger device
-      block now also sends `suggested_area`. Related to but not the same as #326/#327.
+- [x] **Wireless-switch (WPH-01 / WRT-01) naming.** The input branch produced
+      `name: undefined` in the discovery `device` block. **Root cause (found in a
+      real user's silly-level API dump):** when a switch's buttons are individually
+      assigned to loads, Plejd leaves `Device.title` empty and stores the label on
+      **`plejdDevice.installationLocation`** instead (also adds a `diagnostics`
+      field). No add-on read that — upstream / pyplejd / hass-plejd all use only
+      `device.title`. (A different user in icanos#338 had a plain `Device.title` and
+      no `installationLocation` — so it varies by how the switch is configured.)
+      Fixed on `feat/graceful-device-fallback` (0.23.0-beta.4): name =
+      `device.title` → `plejdDevice.installationLocation` (trimmed — has trailing
+      spaces) → sibling `devices[]` title → unset (HA keeps existing name). Output
+      branch uses the same chain. `types/ApiSite.d.ts` `PlejdDevice` gained
+      `installationLocation?` + `diagnostics?`. `InputDevice` gained `roomName`;
+      trigger block sends `suggested_area`. beta.2's room-name substitution (would
+      overwrite good names) was reverted in beta.3, replaced entirely in beta.4.
+      HA-side confirmed (WebSocket registry): all 10 WPH-01 had residual
+      `original_name`, `name_by_user: null`, `created_at: 0` (pre-2024.8); MQTT
+      integration rebuilt 2026-03-10. Related to but not the same as #326/#327.
 
 - [ ] **`Command 101 unknown` = `0x0101` tunable-white colortemp report, not decoded.**
       Seen in a real user's verbose log from DWN-01 downlights (tunable white):

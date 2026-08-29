@@ -6,13 +6,14 @@
 > Plejd hardware support and releases happen here. See
 > [FORK.md](https://github.com/oleost/hassio-plejd/blob/master/FORK.md).
 
-## [0.23.0-beta.3](https://github.com/oleost/hassio-plejd/tree/feat/graceful-device-fallback) (2026-08-29)
+## [0.23.0-beta.4](https://github.com/oleost/hassio-plejd/tree/feat/graceful-device-fallback) (2026-08-29)
 
 > Beta. Testable via the **Plejd (beta)** add-on. Please report what shows up (or
 > doesn't) in your setup — especially anything logged as "inferred" or "not yet
-> supported", and whether any device got **renamed**.
+> supported", and whether any device got **renamed** (it shouldn't lose a name).
 >
-> beta.3 reworks the switch-naming fix (see below) and adds the double-discovery fix.
+> beta.4: wireless switches now get their real name from
+> `plejdDevice.installationLocation` (see Fixed). beta.3: double-discovery fix.
 
 **Changed:**
 
@@ -32,15 +33,16 @@
   `traits` values, so devices that set additional bits are read correctly. No
   change for any currently-known device.
 
-**Fixed:**
-
-- Wireless switch (WPH-01 etc.) naming. When Plejd gives no name for a switch, the
-  add-on now (a) looks for the name on any other `devices[]` entry for the same
-  device before giving up, and (b) leaves the discovery `name` unset rather than
-  sending an empty one — so Home Assistant keeps the name it already has instead
-  of the device showing as `undefined`. The trigger device block also carries a
-  `suggested_area` from the Plejd room now. (beta.2 briefly substituted the room
-  name here, which would have *overwritten* good existing names — reverted.)
+- **Wireless switch (WPH-01 / WRT-01) naming.** On many Plejd sites a switch whose
+  buttons are individually assigned to loads has no `Device.title` — its label is
+  stored on `plejdDevice.installationLocation` instead, which no add-on read. The
+  name is now resolved as `device.title` → `plejdDevice.installationLocation` →
+  a sibling `devices[]` title → (unset, so Home Assistant keeps any existing
+  name). Output devices use the same fallback chain. The trigger device block
+  also carries a `suggested_area` from the Plejd room now. (beta.2 briefly
+  substituted the room name here, which would have *overwritten* good existing
+  names — reverted in beta.3; beta.4 replaces the whole approach with the real
+  name source.)
 - Device discovery was published twice on startup (once into a not-yet-connected
   MQTT client, once on connect). The premature send is removed and
   `sendDiscoveryToHomeAssistant()` now no-ops until the client is connected —

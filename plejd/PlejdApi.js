@@ -47,6 +47,9 @@ const PHYSICAL_BUTTON_TYPES = ['PushButton', 'DirectionUp', 'DirectionDown', 'Ro
 // eslint-disable-next-line no-bitwise
 const hasTrait = (value, bit) => ((parseInt(value, 10) || 0) & bit) === bit;
 
+/** Trimmed string, or undefined if `s` is not a non-blank string. */
+const trimmedOrUndef = (s) => (typeof s === 'string' && s.trim() ? s.trim() : undefined);
+
 const logger = Logger.getLogger('plejd-api');
 
 class PlejdApi {
@@ -544,7 +547,8 @@ class PlejdApi {
     const hardwareId = plejdDevice ? plejdDevice.hardwareId : 'unknown';
     const notes = plejdDevice && plejdDevice.firmware ? plejdDevice.firmware.notes : null;
 
-    // Plejd's firmware notes start with the model, e.g. "wph-01-lc-v4.41.3 ...".
+    // `name` here is the MODEL string (shown as the HA device model), not the
+    // user's device name. From the firmware notes: "wph-01-lc-v4.41.3 ..." -> "wph-01-lc".
     let name = `Unknown (hardware id ${hardwareId})`;
     if (notes && typeof notes === 'string' && notes.trim()) {
       name = notes.trim().split(/\s+/)[0];
@@ -710,6 +714,11 @@ class PlejdApi {
             const room = this.siteDetails.rooms.find((x) => x.roomId === device.roomId);
             const roomTitle = room ? room.title : undefined;
 
+            // Output devices are normally named via device.title; fall back to
+            // plejdDevice.installationLocation for parity with the input branch.
+            const outputName =
+              device.title || trimmedOrUndef(plejdDevice && plejdDevice.installationLocation);
+
             /** @type {import('types/DeviceRegistry').OutputDevice} */
             const outputDevice = {
               bleOutputAddress,
@@ -717,7 +726,7 @@ class PlejdApi {
               colorTempSettings: outputSettings ? outputSettings.colorTemperature : null,
               deviceId: device.deviceId,
               dimmable,
-              name: device.title,
+              name: outputName,
               output: deviceOutput,
               roomId: device.roomId,
               roomName: roomTitle,
@@ -767,13 +776,19 @@ class PlejdApi {
           const inputRoom = this.siteDetails.rooms.find((x) => x.roomId === device.roomId);
           const inputRoomName = inputRoom ? inputRoom.title : undefined;
 
-          // A wireless switch can show up as several `devices[]` entries for one
-          // deviceId; only some carry the title the user set in the Plejd app.
-          // Prefer any entry that has a title (matches thomasloven/pyplejd).
-          const titledEntry = this.siteDetails.devices.find(
+          // Name resolution for a wireless switch, in priority order:
+          //  1. device.title — set when the switch is a standalone named device
+          //  2. plejdDevice.installationLocation — where Plejd stores the switch
+          //     label when its buttons are individually assigned to loads (this
+          //     is the common case; device.title is then empty)
+          //  3. any other devices[] entry for the same deviceId that has a title
+          const siblingTitled = this.siteDetails.devices.find(
             (x) => x.deviceId === device.deviceId && x.title,
           );
-          const inputTitle = titledEntry ? titledEntry.title : device.title;
+          const inputTitle =
+            device.title ||
+            trimmedOrUndef(plejdDevice && plejdDevice.installationLocation) ||
+            (siblingTitled && siblingTitled.title);
 
           try {
             const decodedDeviceType =
@@ -787,11 +802,10 @@ class PlejdApi {
 
             if (decodedDeviceType && decodedDeviceType.broadcastClicks) {
               if (!inputTitle) {
-                // No name from Plejd — leave it unset so Home Assistant keeps any
-                // name it already has for this device (renaming the switch in the
-                // Plejd app is how to give it one).
+                // No name from Plejd (no title, no installationLocation) — leave
+                // it unset so Home Assistant keeps any name it already has.
                 logger.verbose(
-                  `Input device ${device.deviceId} (${decodedDeviceType.name}) has no name set in the Plejd app; leaving discovery name unset.`,
+                  `Input device ${device.deviceId} (${decodedDeviceType.name}) has no name in the Plejd data; leaving discovery name unset.`,
                 );
               }
 
