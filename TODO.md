@@ -20,10 +20,6 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
       base bumped to 21.0.0, CI builds per-arch on native runners, and users pull
       pre-built images instead of building locally. Not pursuing.
 
----
-
-## Resolved / not pursuing (continued)
-
 - [x] **#339 / #338 / #332 / #337 — Unknown device hardware id `42`, `38`, `24`.**
       Newer hardware revisions reported ids not mapped in the device-type lookup.
       Fixed together in `plejd/PlejdApi.js` (`_getDeviceType` cases 24/38/42), shipped
@@ -34,6 +30,18 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
         `42` = WRT-01 (wireless rotary, input) — shipped to stable unconfirmed, with a
         "feedback welcome" note in the changelog and README. Recognition-only change,
         no risk to other devices. Reopen only if a reporter says it still fails.
+
+- [~] **Unknown hardware ids in general — graceful fallback.** `_getDeviceType()` no
+      longer throws on an unmapped id; `_inferDeviceType()` classifies from
+      `device.traits` / `device.outputType` / `inputSetting.buttonType` (approach
+      borrowed from `thomasloven/pyplejd`, which dropped its hw-id table entirely).
+      Plain lights/relays/buttons with unknown ids now work automatically. Covers,
+      thermostats and motion sensors are detected and logged as "not yet supported"
+      then skipped. Shipped in **`0.23.0-beta.1`** (branch `feat/graceful-device-fallback`,
+      built via workflow_dispatch, run 33251683297). Rationale +
+      `pyplejd` command-code notes in `docs/device-classification.md`. When confirmed:
+      merge → master, cut stable `0.23.0`. This makes most future "unknown hardware id"
+      reports non-issues.
 
 ## P1 — Real bugs, broad impact, clear fix
 
@@ -86,10 +94,18 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
 
 ## Feature requests (not bugs — separate backlog, not scheduled)
 
-- #319 — TRM-01 (thermostat) support
-- #301 — Blinds/shutters support (WIN-01, JAL-01) — i.e. HA `cover` devices
-- #300 — WMS-01 motion sensor support
+New device classes: detection already lands these in `_inferDeviceType()` (0.23.0-beta.1)
+with an `unsupported` marker; making them controllable is protocol + discovery work.
+Needs a tester with the actual hardware. `thomasloven/pyplejd` has working
+decode/encode — see `docs/device-classification.md` and the `add-plejd-device` skill.
+
+- #301 / #311 — Blinds/shutters support (WIN-01, JAL-01) — HA `cover`. pyplejd:
+  state via `0x0098`/`0x00C8` position bits, set via `0x0420` minipackage source `0x08`.
+- #319 — TRM-01 (thermostat) support — HA `climate`. pyplejd: `0x045C` setpoint,
+  `0x0461` mode/PWM.
+- #300 — WMS-01 motion sensor support — HA `binary_sensor`/`sensor`. Read-only; lowest
+  risk of the three. Needs the `motionSensors` array (not in `types/ApiSite.d.ts` yet).
 - #247 — Bluetooth-proxy support
 - #186 — Healthcheck/ping
 - #185 — Virtual device
-- #163 — Document the Plejd BLE protocol
+- #163 — Document the Plejd BLE protocol (partly done in `docs/device-classification.md`)
