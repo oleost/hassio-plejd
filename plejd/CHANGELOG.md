@@ -6,10 +6,9 @@
 > pre-built image pipeline. See
 > [FORK.md](https://github.com/oleost/hassio-plejd/blob/master/FORK.md).
 
-## [0.23.1](https://github.com/oleost/hassio-plejd/tree/beta/0.23.1) (2026-08-31)
+## [0.23.1](https://github.com/oleost/hassio-plejd/tree/0.23.1) (2026-08-31)
 
-> Beta — testable via the **Plejd (beta)** add-on. Bugfix release; more fixes may land on
-> this beta before it is promoted to stable. Delete this line at promotion.
+> Shipped after the 0.23.1-beta.1–beta.4 cycle on the **Plejd (beta)** add-on.
 
 **Fixed:**
 
