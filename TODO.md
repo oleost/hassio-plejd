@@ -191,7 +191,20 @@ decode/encode — see `docs/device-classification.md` and the `add-plejd-device`
   `0x0461` mode/PWM.
 - #300 — WMS-01 motion sensor support — HA `binary_sensor`/`sensor`. Read-only; lowest
   risk of the three. Needs the `motionSensors` array (not in `types/ApiSite.d.ts` yet).
-- #247 — Bluetooth-proxy support
+- #247 — **Bluetooth-proxy / ESP32 support.** The add-on talks to BlueZ directly
+  (`dbus-next`), so it only sees local HCI adapters — hence "requires an exclusive USB
+  dongle". The ESP32 BT-proxy support other Plejd projects have is HA-core's work
+  (`habluetooth` / `bleak-esphome` translating GATT ↔ ESPHome native API); an add-on
+  can't borrow it. Nothing in the Plejd protocol needs a dongle.
+  **Realistic path (if ever): option A** — a Node ESPHome-native-API client (protobuf,
+  TCP:6053) as a second BLE backend behind `PlejdBLEHandler`, talking to a dedicated
+  ESP32 with `bluetooth_proxy: active: true` (~8 protobuf message types: advertisement /
+  connect / GATT get-services|read|write|notify). Stays single-language; risk is Node
+  ESPHome-BLE library maturity for *active* GATT (worst case: vendor the ~8 handlers —
+  the proto is public/stable). Rejected: a Python sidecar (polyglot image, IPC,
+  two dep sets); custom ESP32 firmware (a from-scratch C++ project, no shared codebase
+  with the JS add-on — only shared protocol docs + test vectors). Shape: keep BlueZ as
+  default, add a `bleTransport: bluez | esphome` option, beta-test with one ESP32.
 - #186 — Healthcheck/ping
 - #185 — Virtual device
 - #163 — Document the Plejd BLE protocol (partly done in `docs/device-classification.md`)
