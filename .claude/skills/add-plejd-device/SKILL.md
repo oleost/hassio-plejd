@@ -106,7 +106,9 @@ Expect real reverse engineering. Steps, roughly:
    icanos/hassio-plejd#163 "Document Plejd BLE").
 
 This path is open work; relevant feature requests: TRM-01 (#319), covers WIN-01/JAL-01
-(#301), WMS-01 motion (#300).
+(#301), WMS-01 motion (#300). `thomasloven/pyplejd` already has working decode/encode for
+thermostats, covers and light sensors — use it as a reference implementation (see
+"Protocol reference & prior art" below).
 
 ---
 
@@ -122,6 +124,16 @@ doing deep-path work, read these:
   best reference for crypto/auth and the light-level state read. The crypto key is in the
   Plejd app's `site.json` (`.PlejdMesh.CryptoKey`); output addresses in
   `.PlejdMesh._outputAddresses`.
+- **`thomasloven/pyplejd`** (`README.md` / `DOC.md`) — the most up-to-date consolidated
+  protocol doc. Started from #163 ("Much information below is taken from
+  icanos/hassio-plejd#163") and extends it with device classes this add-on does not yet
+  support: **thermostat** (`0x045C` setpoint LE 0.1 °C, `0x0461` mode + PWM), **cover**
+  (`0x0420` "minipackage", source-type `0x08`, position 0–255 + tilt), **color temp /
+  whitebalance** (minipackage type `0x0001`, Kelvin), light sensor WMS-01, battery. Also
+  notes the generalised frame `AA VV TT CC CC PAYLOAD` (`TT` = `00` write / `01` ack /
+  `02` reply / `10` do-not-respond) and the "send the dim byte twice for 255 levels
+  without endianness" trick. Consumed by the `thomasloven/hass-plejd` custom component
+  (native HA Bluetooth, not an add-on) — a good place to cross-check decode logic.
 - **`plejd/types/*.d.ts`** in this repo — the cloud API shapes are documented here.
 - This repo's `PlejdBLEHandler._encryptDecrypt()` / `_createChallengeResponse()` — the
   AES auth/encrypt scheme (challenge-response with the crypto key).
