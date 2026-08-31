@@ -70,11 +70,30 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
       is 1 at minimum); likely an old-upstream artefact. Low value, hard to repro —
       revisit only if someone reports the transition glitch on this fork.
 
-- [ ] **#152 — Room brightness never updated on state changes.**
-      With `includeRoomsAsLights = true`, room brightness is only set from HA, never
-      recalculated when member lights change → broken room transitions (e.g. goodnight
-      fade). Reporter suggests computing room brightness as MAX of member lights on each
-      update. Design-adjacent; touches room/output state aggregation.
+- [~] **#152 — Room brightness never updated on state changes.**
+      **The feature** (`includeRoomsAsLights = true`, `PlejdApi._getRoomDevices`): a Plejd
+      room is a mesh **group address**, so one BLE write dims/fades every light in it
+      atomically. That is its whole point — a HA light group would instead send N separate
+      writes through the rate-limited queue (slow, lights cascade instead of moving
+      together). Also matches how the Plejd app / wall panels model rooms.
+      **What's broken:** the room entity has no state of its own in the mesh — Plejd emits
+      events per light address, never for the room address. So the room entity only updates
+      when *HA* commands the room; change a member any other way (Plejd app, wall switch,
+      the member's own HA entity) and the room entity goes stale. Stale value → next room
+      transition starts from the wrong brightness. Worst case is a long "good night"
+      fade-to-off: the room entity turns off instantly (optimistic) while members are still
+      fading, and members can flicker back on as their transitions finish — two overlapping
+      representations of the same physical lights fighting.
+      **Options:** (A) recompute room state on every member `stateChanged` —
+      `state = OR(members)`, `brightness = MAX(members)` (what the Plejd app does),
+      debounced, behind the flag; medium effort in the state-routing layer, needs a tester
+      who actually uses the feature. (B) fix only the transition interaction; fragile,
+      separate entities. (C) document that HA Areas + light groups / labels are the
+      recommended way to control rooms now (this feature predates mature HA areas/groups),
+      keep `includeRoomsAsLights` for the efficient single-write case with a known-limitation
+      note.
+      **Decision:** C done (see `plejd/README.md`). Not scheduling A — niche feature, no
+      active reporter on this fork. Revisit A if a user asks.
 
 - [x] **#269 — Scenes with å/ä/ö not imported.** Old upstream report (2022, pre-TS-rewrite
       monolith — that code is gone). This fork's scene handling uses the scene UUID

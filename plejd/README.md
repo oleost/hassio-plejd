@@ -46,7 +46,7 @@ The plugin needs you to configure some settings before working. You find these o
 | mqttBroker           | URL of the MQTT Broker, eg. mqtt://                                                                                                                                                      |
 | mqttUsername         | Username of the MQTT broker                                                                                                                                                              |
 | mqttPassword         | Password of the MQTT broker                                                                                                                                                              |
-| includeRoomsAsLights | Adds all rooms as lights, making it possible to turn on/off lights by room instead. Setting this to false will ignore all rooms.                                                         |
+| includeRoomsAsLights | Adds each Plejd room as an extra light entity (default `false`). See ["Rooms as lights"](#rooms-as-lights) below — for most setups a Home Assistant Area or light group is the better choice.                                                         |
 | updatePlejdClock     | Hourly update Plejd devices' clock if out of sync. Clock is used for time-based scenes. Not recommended if you have a Plejd gateway. Clock updates may flicker scene-controlled devices. |
 | logLevel             | Minimim log level. Supported values are `error`, `warn`, `info`, `debug`, `verbose`, `silly` with increasing amount of logging. Do not log more than `info` for production purposes.     |
 | connectionTimeout    | Number of seconds to wait when scanning and connecting. Might need to be tweaked on platforms other than RPi 4. Defaults to: 2 seconds.                                                  |
@@ -98,6 +98,27 @@ are recognized but not yet controllable; they are logged and skipped, and will
 appear on their own once support is added. See
 [`docs/device-classification.md`](../docs/device-classification.md).
 
+## Rooms as lights
+
+With `includeRoomsAsLights: true` the add-on adds one extra light entity per Plejd room.
+A Plejd room is a mesh **group address**, so a single Bluetooth write turns on, dims or
+fades the whole room at once — the lights move together, and it does not fill the write
+queue the way commanding each light separately does.
+
+**Known limitation:** the room entity has no state of its own in the Plejd mesh. It only
+updates when _Home Assistant_ commands the room. If you change a light in the room another
+way — the Plejd app, a wall switch, or that light's own Home Assistant entity — the room
+entity is left showing a stale brightness, and the next room transition starts from that
+wrong value. A long "good-night" fade is the worst case: the room reports off immediately
+while its lights are still fading.
+
+**Recommendation:** for most setups, put the lights in a Home Assistant
+[Area](https://www.home-assistant.io/docs/organizing/areas/) or a
+[light group](https://www.home-assistant.io/integrations/group/) instead — you get room
+on/off/dim with correct state and no extra configuration here. Use `includeRoomsAsLights`
+only when you specifically need the single-write efficiency for whole-room transitions and
+can live with the stale-state caveat.
+
 ## Transitions
 
 Transitions from Home Assistant are supported (for dimmable devices) when transition is longer than 1 second. Plejd will do a bit of internal transitioning (default soft start is 0.1 seconds).
@@ -109,7 +130,7 @@ Transition points will be skipped if the queue of messages to be sent is over a 
 Recommendations
 
 - Only transition a few devices at a time when possible
-- Entire rooms can be transitioned efficiently after setting includeRoomsAsLights to true
+- Entire rooms can be transitioned in a single write with `includeRoomsAsLights` (see ["Rooms as lights"](#rooms-as-lights) for the trade-off)
 - Expect 5-10 brightness changes per second, meaning 5 devices => 1-2 updates per device per second
 - ... meaning that SLOW transitions will work well (wake-up light, gradually fade over a minute, ...), but quick ones will only work well for few devices or small relative changes in brightness
 - When experiencing choppy quick transitions, turn transitioning off and let the Plejd hardware do the work instead
