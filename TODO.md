@@ -125,13 +125,40 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
       integration rebuilt 2026-03-10. Related to but not the same as #326/#327.
 
 - [ ] **`Command 101 unknown` = `0x0101` tunable-white colortemp report, not decoded.**
-      Seen in a real user's verbose log from DWN-01 downlights (tunable white):
-      `4d01030101b80b` etc. decode to `cmd 0x0101` which `_onLastDataUpdated` doesn't
-      handle (only `0x0420` colortemp). pyplejd calls this
-      `CMD_TUNABLE_WHITE_TEMPERATURE = 0x0101`. Consequence: Home Assistant never gets
-      live colour-temperature state from these lights (setting still works). Add a
-      branch in `PlejdBLEHandler._onLastDataUpdated` for `0x0101`. Low priority,
-      pre-existing, independent of the fallback work.
+      Confirmed 2026-08-31 against the user's live HA: a DWN-01 spot
+      (`light.spotter_tak_trappoppgang`, `FFE41AE56C56_0`) shows `color_temp_kelvin` frozen
+      at the value of the last *HA* command — changing colour in the Plejd app never
+      updates HA. Setting colour from HA works fine.
+      **Root cause:** `PlejdBLEHandler._onLastDataUpdated` only decodes `0x0420`
+      (`BLE_CMD_COLOR_CHANGE`) for colour. When only the white temperature changes, Plejd
+      sends `cmd 0x0101` instead, which hits the `else` branch and is dropped (logged
+      `Command 101 unknown` at verbose). pyplejd = `CMD_TUNABLE_WHITE_TEMPERATURE = 0x0101`.
+      **Decode (from the one sample `4d 01 03 01 01 b8 0b` + pyplejd):** `[0]` addr,
+      `[1]` version `01`, `[2]` command-type, `[3..4]` cmd `0101` BE, `[5..6]` payload.
+      `b8 0b` LE = `0x0bb8` = 3000 → looks like **Kelvin, little-endian** (BE would be
+      47115, nonsense). Needs 2–3 more real samples at known temperatures to lock
+      endianness/unit before shipping — the user has the hardware to capture them
+      (`logLevel: verbose`, change colour temp in the Plejd app, grab `Raw event received`
+      + `Decoded:` lines).
+      **Fix:** add an `else if (cmd === 0x0101)` branch that reads the temperature and
+      emits `COMMANDS.COLOR` with `{ color: <kelvin> }` (+ state on). Low priority,
+      pre-existing, independent of the fallback work. Now testable end-to-end.
+
+- Related side-findings from that same investigation (2026-08-31), **not add-on bugs:**
+  - **"Hidden by integration" on 9 of 28 Plejd lights** (mixed DWN-01 / LED-10 /
+    DIM-01-2P). The add-on's discovery payload has no `enabled_by_default` /
+    `entity_category` / hide flag — verified identical for a hidden and a visible DWN-01
+    via `mqtt/device/debug_info`. The Plejd `hiddenFromIntegrations` cloud field is unused
+    (upstream removed the handling in `5687087`, 2021). This is stale HA entity-registry
+    state from a past manual/bulk hide; a fresh identical discovery does not un-hide an
+    entity. Fix is HA-side: entity settings → toggle "Visible".
+  - **`Trying to set state for null` / `Unknown output id null` bursts** after operating
+    grouped DWN-01 spots: a mesh DIM/STATE/COLOR event arrives from a `bleOutputAddress`
+    that `getOutputDeviceByBleOutputAddress()` doesn't know → same code path and same
+    harmless log-noise as #326/#327 below. Also seeing ~1/min `{"state":"ON","brightness":255}`
+    republishes for the spot (periodic mesh broadcast, no functional effect). Capture the
+    `Decoded: Device null (BLE address X), cmd Y` line at `verbose` to identify the address
+    (likely a secondary output / group address of the grouped downlights).
 
 - [ ] **#327 — Input devices logged as `null` in verbose logs.**
       Pinpointed by reporter: `PlejdBLEHandler.js` (~line 875-877) uses
