@@ -124,38 +124,42 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
       `original_name`, `name_by_user: null`, `created_at: 0` (pre-2024.8); MQTT
       integration rebuilt 2026-03-10. Related to but not the same as #326/#327.
 
-- [ ] **DWN-01 colour-temperature reports from the Plejd app never reach HA (two bugs).**
-      Confirmed 2026-08-31 with a full verbose capture from the user's DWN-01 spot
-      "Spotter tak trappoppgang" (`FFE41AE56C56_0`). Changing colour in the Plejd app: the
-      light physically changes, HA's `color_temp_kelvin` stays frozen at the last *HA*
-      command. Setting colour from HA works. The `0x0101` guess in the old note was wrong —
-      the reports come as **`cmd 0x0420`** (`BLE_CMD_COLOR_CHANGE`), e.g.
-      `5a 01 10 04 20 03 01 11 0e 74` → address `0x5a`=90, payload `03 01 11 <ct>` with
-      `<ct>` = **Kelvin, big-endian** (`0e74`=3700, `0fa0`=4000, `0bb8`=3000, `0898`=2200 —
-      all exact). Same layout pyplejd has (commented): `[addr,01,10,04,20, a, 01, 11, ct_be]`.
+- [ ] **Tunable-white colour-temperature reports (`cmd 0x0101`) are not decoded → HA
+      never gets live colour temp.** Fully characterised 2026-08-31 from a verbose
+      `plejd_beta` capture across the user's DWN-01 spots (+ DIM-01-2P / LED-10 tunable).
+      Changing colour temp (Plejd app, or an adaptive/circadian scene): the light changes,
+      HA's `color_temp_kelvin` stays frozen at the last value set *from HA*. Setting from HA
+      works.
 
-      **Bug A — `data` is never populated in the colour branch.**
-      `PlejdBLEHandler._onLastDataUpdated` (~line 898) computes `colorTempKelvin`, logs it,
-      then `this.emit(commandReceived, outputUniqueId, COMMANDS.COLOR, data)` with `data`
-      still `{}`. `_bleCommandReceived` then does `setOutputState(id, undefined, null,
-      undefined)` and emits `{state:false, color:undefined}` — hence the log line
-      `Set color state to undefined`. Fix: `data = { state, dim, color: colorTempKelvin }`
-      (and note bytes 5/7 are *not* state/dim for a `03 01 11` colour packet — for a
-      colour-only report keep state=on and don't touch dim).
+      **The report packet** (7 bytes): `<addr> 01 03 01 01 <kelvin LE>`, e.g.
+      `58 01 03 01 01 98 08` from address 88 (= the trappoppgang spot's *registered*
+      address — resolves correctly, **not** null). `98 08` LE = `0x0898` = 2200 K. More
+      samples, all exact Kelvin: `b8 0b`=3000, `80 0c`=3200, `f0 0a`=2800, `c4 09`=2500,
+      `60 09`=2400. So: `cmd 0x0101`, payload = `readUInt16LE(PAYLOAD_POSITION_OFFSET)` (offset
+      5), unit **Kelvin**. No state/dim byte in the packet.
 
-      **Bug B — the reporting BLE address is not registered.**
-      The colour reports come from address **90**, which `getOutputDeviceByBleOutputAddress`
-      doesn't know → `Device null` → `Trying to set state for null` /
-      `Unknown output id null`, event dropped before Bug A matters. 90 is the spot's
-      colour-report address, distinct from its registered output address. `DeviceRegistry`
-      only maps `outputAddress[deviceId][output]`; it never maps `deviceAddress[deviceId]`
-      or extra `outputAddress` entries. **Need the cached-API entries for `FFE41AE56C56`**
-      (`deviceAddress`, `outputAddress`, `outputSettings`) to confirm whether 90 is the
-      device address or a second output — then either map those extra addresses in the
-      registry, or add a `deviceAddress`→uniqueId fallback in the decode.
+      **Root cause:** `PlejdBLEHandler._onLastDataUpdated` has no `else if (cmd === 0x0101)`
+      branch → falls to `else` → logged `Command 101 unknown` → dropped. The device IS
+      identified correctly; the earlier "address 90 / register deviceAddress" theory was a
+      red herring from a *different* packet seen during scene-toggling (`cmd 0x0420`,
+      `<addr+2>`, `03 01 11 <kelvin BE>`).
 
-      Same-class as #326/#327 (unregistered address → null spam). Deep-path, but now fully
-      characterised and testable on the user's hardware.
+      **Fix:**
+      1. Add `else if (cmd === 0x0101)` → `data = { color: decoded.readUInt16LE(PAYLOAD_POSITION_OFFSET) }`,
+         `command = COMMANDS.COLOR`, emit.
+      2. `_bleCommandReceived` COLOR handler currently does
+         `setOutputState(id, data.state, null, data.color)` + emits `{ state: !!data.state, ... }`
+         — with a colour-only update `data.state` is undefined → tells HA the light is OFF.
+         Must preserve current state on a colour-only report.
+      3. While here, the existing `0x0420` colour branch (~line 898) has the same defect —
+         it computes `colorTempKelvin` but emits with `data` still `{}` (log:
+         `Set color state to undefined`). Populate `data` there too. `0x0420` colour layout
+         is `03 01 11 <kelvin BE>` (note: BE, unlike `0x0101`).
+      4. Optional: the companion `<addr> 01 02 01 01 00` packets (command-type `0x02`, no
+         payload, from unregistered nearby addresses) are harmless null-spam — same class as
+         #326/#327; could suppress the warning for `cmd 0x0101` + null device.
+
+      Deep-path but fully characterised and testable on the user's hardware. Ship to beta.
 
 - Side-finding (2026-08-31), **not an add-on bug: "hidden by integration" on 9 of 28
   Plejd lights** (mixed DWN-01 / LED-10 / DIM-01-2P). The discovery payload has no
