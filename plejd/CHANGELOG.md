@@ -6,6 +6,49 @@
 > Plejd hardware support and releases happen here. See
 > [FORK.md](https://github.com/oleost/hassio-plejd/blob/master/FORK.md).
 
+## [0.23.0](https://github.com/oleost/hassio-plejd/tree/0.23.0) (2026-08-31)
+
+> Shipped after the 0.23.0-beta.1–beta.4 cycle on the **Plejd (beta)** add-on.
+
+**Changed:**
+
+- **Unrecognized hardware ids no longer disappear.** `_getDeviceType()` used to
+  throw on any hardware id not in its lookup table, and the device was silently
+  skipped. It now falls back to `_inferDeviceType()`, which classifies the device
+  from the cloud API's structured fields — `device.outputType`, the
+  `device.traits` bitfield, and `inputSetting.buttonType` — instead of a lookup
+  table. A plain light / relay / wireless button with an unmapped id now works
+  automatically (logged as "inferred"; please still open an issue with the id so
+  it can get a proper name).
+- Covers/blinds, thermostats and motion sensors are now **recognized** (via
+  traits / `outputType`) and logged clearly as "not yet supported — will appear
+  automatically once support is added", instead of throwing an "Unknown device
+  type" error. Control for those categories is still future work.
+- Dimmable detection now tests the `DIM` trait bit instead of matching exact
+  `traits` values, so devices that set additional bits are read correctly. No
+  change for any currently-known device.
+
+**Fixed:**
+
+- **Wireless switch (WPH-01 / WRT-01) naming.** On many Plejd sites a switch whose
+  buttons are individually assigned to loads has no `Device.title` — its label is
+  stored on `plejdDevice.installationLocation` instead, which no add-on read. The
+  name is now resolved as `device.title` → `plejdDevice.installationLocation` →
+  a sibling `devices[]` title → (unset, so Home Assistant keeps any existing
+  name). Output devices use the same fallback chain. The trigger device block
+  also carries a `suggested_area` from the Plejd room now. (beta.2 briefly
+  substituted the room name here, which would have _overwritten_ good existing
+  names — reverted in beta.3; beta.4 replaces the whole approach with the real
+  name source.)
+- Device discovery was published twice on startup (once into a not-yet-connected
+  MQTT client, once on connect). The premature send is removed and
+  `sendDiscoveryToHomeAssistant()` now no-ops until the client is connected —
+  also removes a potential `Cannot read property 'publish' of undefined` crash
+  (upstream #325).
+
+See [`docs/device-classification.md`](https://github.com/oleost/hassio-plejd/blob/master/docs/device-classification.md)
+for the full rationale and the `thomasloven/pyplejd` prior art this is based on.
+
 ## [0.22.0](https://github.com/oleost/hassio-plejd/tree/0.22.0) (2026-08-29)
 
 **Fixed:**

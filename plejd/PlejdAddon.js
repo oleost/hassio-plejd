@@ -124,13 +124,9 @@ class PlejdAddon extends EventEmitter {
 
     this.mqttClient.init();
 
-    // Eagerly send discovery after MQTT client is initialized
-    try {
-      logger.verbose('Eagerly sending discovery to Home Assistant.');
-      this.mqttClient.sendDiscoveryToHomeAssistant();
-    } catch (err) {
-      logger.error('Error in eager discovery send', err);
-    }
+    // Discovery is sent from the `connected` handler above (and again on every
+    // Home Assistant birth message). No eager pre-connect send — it published
+    // into a not-yet-connected client and duplicated every discovery message.
 
     // subscribe to changes from Plejd
     this.plejdDeviceCommunication.on(

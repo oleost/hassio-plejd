@@ -37,20 +37,23 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
       borrowed from `thomasloven/pyplejd`, which dropped its hw-id table entirely).
       Plain lights/relays/buttons with unknown ids now work automatically. Covers,
       thermostats and motion sensors are detected and logged as "not yet supported"
-      then skipped. Shipped in **`0.23.0-beta.1`** (branch `feat/graceful-device-fallback`,
-      built via workflow_dispatch, run 33251683297). Rationale +
-      `pyplejd` command-code notes in `docs/device-classification.md`. When confirmed:
-      merge → master, cut stable `0.23.0`. This makes most future "unknown hardware id"
-      reports non-issues.
+      then skipped. Branch `feat/graceful-device-fallback`; rationale + `pyplejd`
+      command-code notes in `docs/device-classification.md`. beta.2-3 fold in the #325
+      discovery fix and the unnamed-switch fix below. When confirmed: merge → master,
+      cut stable `0.23.0`. This makes most future "unknown hardware id" reports
+      non-issues.
 
 ## P1 — Real bugs, broad impact, clear fix
 
-- [ ] **#325 — `Cannot read property 'publish' of undefined` on eager discovery.**
-      Discovery is sent before the MQTT client is connected, then again after connect.
-      Likely an init-order/race bug. Check the eager `sendDiscoveryToHomeAssistant()`
-      call in `plejd/PlejdAddon.init()` (runs before `mqttClient.init()`) and the
-      publish path around `plejd/MqttClient.js`. Our fork has the same pattern, so it
-      may still be present — verify before fixing.
+- [~] **#325 — `Cannot read property 'publish' of undefined` on eager discovery.**
+      Confirmed the pattern in our fork: `PlejdAddon.init()` called
+      `sendDiscoveryToHomeAssistant()` right after `mqttClient.init()`, before the
+      broker connection was up — publishing into a not-yet-connected client and
+      duplicating every discovery message (seen in a real 0.23.0-beta.1 startup log).
+      Fixed on `feat/graceful-device-fallback` (since 0.23.0-beta.2): removed the
+      premature call; `sendDiscoveryToHomeAssistant()` now no-ops unless
+      `this.client.connected`. Discovery still fires from the `connected` handler and
+      on every HA birth message. Ships with the graceful-fallback beta.
 
 ## P2 — Real logic bugs, more nuanced
 
@@ -72,6 +75,34 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
       `plejd/Scene.js`.
 
 ## P3 — Real but cosmetic / log-noise only
+
+- [x] **Wireless-switch (WPH-01 / WRT-01) naming.** The input branch produced
+      `name: undefined` in the discovery `device` block. **Root cause (found in a
+      real user's silly-level API dump):** when a switch's buttons are individually
+      assigned to loads, Plejd leaves `Device.title` empty and stores the label on
+      **`plejdDevice.installationLocation`** instead (also adds a `diagnostics`
+      field). No add-on read that — upstream / pyplejd / hass-plejd all use only
+      `device.title`. (A different user in icanos#338 had a plain `Device.title` and
+      no `installationLocation` — so it varies by how the switch is configured.)
+      Fixed on `feat/graceful-device-fallback` (0.23.0-beta.4): name =
+      `device.title` → `plejdDevice.installationLocation` (trimmed — has trailing
+      spaces) → sibling `devices[]` title → unset (HA keeps existing name). Output
+      branch uses the same chain. `types/ApiSite.d.ts` `PlejdDevice` gained
+      `installationLocation?` + `diagnostics?`. `InputDevice` gained `roomName`;
+      trigger block sends `suggested_area`. beta.2's room-name substitution (would
+      overwrite good names) was reverted in beta.3, replaced entirely in beta.4.
+      HA-side confirmed (WebSocket registry): all 10 WPH-01 had residual
+      `original_name`, `name_by_user: null`, `created_at: 0` (pre-2024.8); MQTT
+      integration rebuilt 2026-03-10. Related to but not the same as #326/#327.
+
+- [ ] **`Command 101 unknown` = `0x0101` tunable-white colortemp report, not decoded.**
+      Seen in a real user's verbose log from DWN-01 downlights (tunable white):
+      `4d01030101b80b` etc. decode to `cmd 0x0101` which `_onLastDataUpdated` doesn't
+      handle (only `0x0420` colortemp). pyplejd calls this
+      `CMD_TUNABLE_WHITE_TEMPERATURE = 0x0101`. Consequence: Home Assistant never gets
+      live colour-temperature state from these lights (setting still works). Add a
+      branch in `PlejdBLEHandler._onLastDataUpdated` for `0x0101`. Low priority,
+      pre-existing, independent of the fallback work.
 
 - [ ] **#327 — Input devices logged as `null` in verbose logs.**
       Pinpointed by reporter: `PlejdBLEHandler.js` (~line 875-877) uses

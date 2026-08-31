@@ -121,7 +121,10 @@ const getInputDeviceTriggerDiscoveryPayload = (
     identifiers: [`${inputDevice.deviceId}`],
     manufacturer: 'Plejd',
     model: inputDevice.typeName,
-    name: inputDevice.name,
+    // Only set a name when Plejd gave us one - otherwise Home Assistant keeps
+    // whatever name it already has for this device.
+    ...(inputDevice.name ? { name: inputDevice.name } : {}),
+    ...(inputDevice.roomName !== undefined ? { suggested_area: inputDevice.roomName } : {}),
   },
 });
 
@@ -348,6 +351,14 @@ class MqttClient extends EventEmitter {
   }
 
   sendDiscoveryToHomeAssistant() {
+    if (!this.client || !this.client.connected) {
+      // Called before the broker connection is up (or during a reconnect). The
+      // `connected` event handler re-runs discovery once connected, so skip
+      // rather than publishing into a not-yet-connected client.
+      logger.verbose('Skipping discovery send - MQTT client not connected yet.');
+      return;
+    }
+
     // -------- DISCOVERY FOR OUTPUT DEVICES -------------
 
     const allOutputDevices = this.deviceRegistry.getAllOutputDevices();
@@ -412,10 +423,11 @@ class MqttClient extends EventEmitter {
     const allInputDevices = this.deviceRegistry.getAllInputDevices();
     logger.info(`Sending discovery for ${allInputDevices.length} Plejd input devices`);
     allInputDevices.forEach((inputDevice) => {
-      logger.debug(`Sending discovery for ${inputDevice.name}`);
+      const inputLabel = inputDevice.name || `${inputDevice.deviceId} (unnamed in Plejd)`;
+      logger.debug(`Sending discovery for ${inputLabel}`);
       const inputInputPayload = getInputDeviceTriggerDiscoveryPayload(inputDevice);
       logger.info(
-        `Discovered ${inputDevice.typeName} (${inputDevice.type}) named ${inputDevice.name} (${inputDevice.bleInputAddress} : ${inputDevice.uniqueId}).`,
+        `Discovered ${inputDevice.typeName} (${inputDevice.type}) named ${inputLabel} (${inputDevice.bleInputAddress} : ${inputDevice.uniqueId}).`,
       );
       logger.verbose(
         `Publishing  ${getTopicName(

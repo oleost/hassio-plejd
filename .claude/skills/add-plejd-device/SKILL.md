@@ -106,7 +106,9 @@ Expect real reverse engineering. Steps, roughly:
    icanos/hassio-plejd#163 "Document Plejd BLE").
 
 This path is open work; relevant feature requests: TRM-01 (#319), covers WIN-01/JAL-01
-(#301), WMS-01 motion (#300).
+(#301), WMS-01 motion (#300). `thomasloven/pyplejd` already has working decode/encode for
+thermostats, covers and light sensors — use it as a reference implementation (see
+"Protocol reference & prior art" below).
 
 ---
 
@@ -122,6 +124,16 @@ doing deep-path work, read these:
   best reference for crypto/auth and the light-level state read. The crypto key is in the
   Plejd app's `site.json` (`.PlejdMesh.CryptoKey`); output addresses in
   `.PlejdMesh._outputAddresses`.
+- **`thomasloven/pyplejd`** (`README.md` / `DOC.md`) — the most up-to-date consolidated
+  protocol doc. Started from #163 ("Much information below is taken from
+  icanos/hassio-plejd#163") and extends it with device classes this add-on does not yet
+  support: **thermostat** (`0x045C` setpoint LE 0.1 °C, `0x0461` mode + PWM), **cover**
+  (`0x0420` "minipackage", source-type `0x08`, position 0–255 + tilt), **color temp /
+  whitebalance** (minipackage type `0x0001`, Kelvin), light sensor WMS-01, battery. Also
+  notes the generalised frame `AA VV TT CC CC PAYLOAD` (`TT` = `00` write / `01` ack /
+  `02` reply / `10` do-not-respond) and the "send the dim byte twice for 255 levels
+  without endianness" trick. Consumed by the `thomasloven/hass-plejd` custom component
+  (native HA Bluetooth, not an add-on) — a good place to cross-check decode logic.
 - **`plejd/types/*.d.ts`** in this repo — the cloud API shapes are documented here.
 - This repo's `PlejdBLEHandler._encryptDecrypt()` / `_createChallengeResponse()` — the
   AES auth/encrypt scheme (challenge-response with the crypto key).
@@ -187,6 +199,16 @@ Use the established beta channel (see the `beta-release-procedure` memory and
    (pushes the version tag to GHCR; does NOT move `:latest`).
 3. Bump `version` in `plejd-beta/config.json` (master) to that tag so testers can install
    "Plejd (beta)" from the existing store URL.
-4. When confirmed: merge branch → master, bump `plejd/config.json` to the stable version,
-   move the CHANGELOG entry, cut a GitHub release (CI builds + pushes the stable tag and
-   `:latest`), and keep `plejd-beta` in sync.
+4. When confirmed, promote to stable **via a pull request** (not a direct push to master —
+   this is the established practice, see the `stable-release-via-pr` memory):
+   a. On the feature branch: `git merge origin/master` (pick up any beta-pointer commits),
+      rename the CHANGELOG `-beta.N` heading to the plain `[X.Y.Z]` stable heading + date and
+      drop the `> Beta.` blockquote, bump `plejd/config.json` **and** `plejd-beta/config.json`
+      to `X.Y.Z`, run `npm run lint` in `plejd/`.
+   b. `gh pr create -R oleost/hassio-plejd --base master` with a body summarising the release.
+   c. Wait for the build CI (`build.yaml` runs build-only on PRs — both arches must go green),
+      then `gh pr merge --merge` (a real merge commit — **never squash**, it would flatten the
+      curated commit messages).
+   d. `gh release create X.Y.Z -R oleost/hassio-plejd` — CI then builds + pushes `:X.Y.Z` and
+      moves `:latest`. Do this right after merge so the store's advertised version and the
+      published image line up quickly.

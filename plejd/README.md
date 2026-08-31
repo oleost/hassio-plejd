@@ -87,6 +87,17 @@ original (recognition-only change). If yours misbehaves, please
 [open an issue](https://github.com/oleost/hassio-plejd/issues) with the hardware id
 and a debug log — feedback is very welcome.
 
+### Devices not in the table
+
+A device whose hardware id is not listed above is no longer skipped. The add-on
+classifies it from the Plejd cloud data (`outputType`, capability `traits`,
+button type) and exposes a plain light / relay / wireless button automatically —
+look for an `inferred` line in the log and please open an issue with the hardware
+id so it can get a proper name. **Covers/blinds, thermostats and motion sensors**
+are recognized but not yet controllable; they are logged and skipped, and will
+appear on their own once support is added. See
+[`docs/device-classification.md`](../docs/device-classification.md).
+
 ## Transitions
 
 Transitions from Home Assistant are supported (for dimmable devices) when transition is longer than 1 second. Plejd will do a bit of internal transitioning (default soft start is 0.1 seconds).

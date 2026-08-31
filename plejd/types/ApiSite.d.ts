@@ -402,6 +402,13 @@ export interface PlejdDevice {
   dirtyClock: boolean;
   hardwareId: string;
   faceplateId: string;
+  /**
+   * The switch label the user set in the Plejd app, present on newer sites for
+   * WPH-01/WRT-01 whose buttons are individually assigned to loads (in that case
+   * the corresponding `Device.title` is empty). Sometimes has trailing spaces.
+   */
+  installationLocation?: string;
+  diagnostics?: string;
   firmware: Firmware;
   createdAt: Date;
   updatedAt: Date;
