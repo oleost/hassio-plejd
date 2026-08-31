@@ -159,15 +159,22 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
   entity-registry state from a past manual/bulk hide; a fresh identical discovery does not
   un-hide an entity. Fix is HA-side: entity settings → toggle "Visible".
 
-- [ ] **#327 — Input devices logged as `null` in verbose logs.**
-      Pinpointed by reporter: `PlejdBLEHandler.js` (~line 875-877) uses
-      `getOutputDeviceByBleOutputAddress()` for what may be an *input* device, which
-      returns null. Needs an input-address lookup fallback. Verbose logs only.
+- [x] **#327 — Input devices logged as `null` in verbose logs.** Not pursuing (by
+      design). `_onLastDataUpdated` (~line 875) looks up `getOutputDeviceByBleOutputAddress`;
+      a packet from an input device's address resolves to nothing, so the `verbose` line
+      reads `Decoded: Device null (BLE address X)`. That line is deliberate diagnostic
+      output — it's exactly what let us pin down the DWN-01 colour-channel address (90) in
+      the 2026-08-31 session. Only logged at `verbose` (opt-in). Prettifying it has ~no
+      value and risks hiding a real "unknown address" case. Leave it.
 
-- [ ] **#326 — WRT-01 "Trying to set state for null" warnings.**
-      Same root cause as #327 — WRT-01s have no output of their own (they control other
-      devices), so events resolve to null and emit warnings. Harmless but noisy; handle
-      input-only devices gracefully. Fix together with #327.
+- [ ] **#326 — WRT-01 "Trying to set state for null" warnings.** A WRT-01 (rotary, no
+      output of its own) broadcasts DIM-like events on its own address → `_onLastDataUpdated`
+      emits `commandReceived(null, DIM)` → `setOutputState(null)` → a `WARN` line. Shows at
+      the default log level, so this one is worth silencing (unlike #327). Fix would mirror
+      what 0.23.1-beta.4 already does for colour reports: `!outputUniqueId` on DIM/STATE →
+      drop quietly at `debug`, don't emit. **Blocked: needs a WRT-01 owner to confirm the
+      packet shape and that the fix doesn't suppress anything real** — neither the fork
+      maintainer nor the current beta tester has one.
 
 ## Needs triage (may be hardware/user/feature, not confirmed our bug)
 
