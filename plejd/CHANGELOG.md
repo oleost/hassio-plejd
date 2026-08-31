@@ -90,10 +90,10 @@ for the full rationale and the `thomasloven/pyplejd` prior art this is based on.
 
 **Changed:**
 
-- This fork is now the actively maintained continuation of the (dormant) upstream
-  project. Development, bug triage (see `TODO.md`) and releases happen here going
-  forward. A **Plejd (beta)** add-on provides a channel for testing unreleased
-  changes before they ship to the stable add-on.
+- Development on this fork now covers bug triage (see `TODO.md`), new Plejd hardware
+  ids and regular releases — not just the scene changes it started with. A **Plejd
+  (beta)** add-on provides a channel for testing unreleased changes before they ship to
+  the stable add-on.
 
 ## [0.21.0](https://github.com/oleost/hassio-plejd/tree/0.21.0) (2026-06-18)
 
@@ -161,8 +161,6 @@ This release consolidates the fork's changes relative to upstream 0.19.0.
 **Closed issues:**
 
 - Added support for SPD-01 dimmable plug device [\#328](https://github.com/icanos/hassio-plejd/issues/328)
-
-## [0.17.1](https://github.com/icanos/hassio-plejd/tree/0.17.1) (2025-09-12)hangelog hassio-plejd Home Assistant Plejd addon
 
 ## [0.17.2](https://github.com/icanos/hassio-plejd/tree/0.17.2) (2025-09-27)
 

@@ -8,7 +8,7 @@ A Home Assistant **add-on** that bridges Plejd home automation devices (lights, 
 
 The repository is an add-on **repository** (added to the HA Add-on Store). The actual add-on lives entirely in `plejd/`; the repo root only holds `repository.json`, `README.md`, and CI.
 
-This is a fork of [icanos/hassio-plejd](https://github.com/icanos/hassio-plejd). The fork's distinguishing changes are scene-related (scenes as Device Automation triggers, scene history Event entities, retained-message handling) plus a pre-built GHCR image pipeline. See the root `README.md` "This fork" section for specifics.
+This is a fork of [icanos/hassio-plejd](https://github.com/icanos/hassio-plejd). It started with scene-related changes (scenes as Device Automation triggers, scene history Event entities, retained-message handling) plus a pre-built GHCR image pipeline, and has since added: a graceful fallback so unrecognized hardware ids are classified from cloud data instead of skipped, more device/hardware-id mappings, tunable-white colour-temperature sync, and ongoing bug triage (`TODO.md`) + regular releases via a beta channel. See the root `README.md` "This fork" section and `FORK.md` for specifics.
 
 ## Commands
 

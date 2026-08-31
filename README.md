@@ -1,6 +1,6 @@
 # Plejd add-on for Home Assistant
 
-Home Assistant add-on for [Plejd](https://www.plejd.com/) home automation devices. It lets you control your Plejd lights, switches and relays from Home Assistant over Bluetooth (BLE), uses MQTT to talk to Home Assistant, and auto-discovers the devices in range. Changes made in the Plejd app are propagated back to Home Assistant.
+Home Assistant add-on for [Plejd](https://www.plejd.com/) home automation devices. It lets you control your Plejd lights, switches, relays and scenes from Home Assistant over Bluetooth (BLE), exposes wireless buttons (WPH-01 / WRT-01) as automation triggers, uses MQTT to talk to Home Assistant, and auto-discovers the devices in range. Changes made in the Plejd app are propagated back to Home Assistant.
 
 This is an add-on **repository** that you add to the Home Assistant Add-on Store. It contains a single add-on, [Plejd](plejd/). Once installed, see the [add-on documentation](plejd/README.md) for configuration and usage.
 
@@ -97,14 +97,13 @@ Disclaimer: I am in no way affiliated with Plejd and am doing this solely as a h
 
 ## Developing
 
-The code in this project follows the [Airbnb JavaScript guide](https://github.com/airbnb/javascript) with a few exceptions. Do run the `npm run lint:fix` command in the `plejd` folder (after running `npm install`) and fix any remaining issues before committing. If copying the plugin locally to your Home Assistant instance _do not include the node_modules directory_, strange errors will happen during build!
+The code in this project follows the [Airbnb JavaScript guide](https://github.com/airbnb/javascript) with a few exceptions. Run `npm run lint:fix` in the `plejd` folder and fix any remaining issues before committing. If copying the plugin locally to your Home Assistant instance _do not include the node_modules directory_, strange errors will happen during build!
+
+`npm install` builds a native Bluetooth module (`@abandonware/bluetooth-hci-socket`) that needs a build toolchain and only works on Linux — on other platforms, or if you only need the lint/type tooling, use `npm install --ignore-scripts`.
 
 For a nice developer experience it is very convenient to have `eslint` and `prettier` installed in your favorite editor (such as VS Code) and use the "format on save" option (or invoke formatting by Alt+Shift+F in VS Code). Any code issues should appear in the problems window inside the editor, as well as when running the command above.
 
-For partial type hinting you can run
-
-- `npm install --global typings`
-- `typings install`
+Type hints are provided by JSDoc comments referencing the `.d.ts` files in `plejd/types/`; `plejd/jsconfig.json` enables editor type-checking with no build step (there is no TypeScript compilation).
 
 When contributing, please do so by forking the repo and then using pull requests towards the `master` branch.
 

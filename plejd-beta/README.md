@@ -8,8 +8,8 @@ manual file copying — the actual code lives in `../plejd/` and is built by CI.
 
 This add-on has no source of its own. Its `config.json` sets
 `image: ghcr.io/oleost/{arch}-hassio-plejd` and a beta `version`, so Home Assistant
-pulls `ghcr.io/oleost/{arch}-hassio-plejd:<version>` — the image built from the beta
-branch via the build workflow (`workflow_dispatch`).
+pulls `ghcr.io/oleost/{arch}-hassio-plejd:<version>` — the image built from the
+`beta/X.Y.Z` branch via the build workflow (`workflow_dispatch`).
 
 ## Testing a beta
 
@@ -25,7 +25,8 @@ Configuration options are identical to the stable add-on — see the
 
 ## Maintainer notes
 
-To publish a new beta: build the beta image from the feature branch
-(`gh workflow run build.yaml --ref <branch> -R oleost/hassio-plejd`), then bump
-`version` here to the matching tag. Keep this folder out of the build workflow's
-trigger paths — it ships no code, only the pointer.
+To publish a new beta: bump `-beta.N` on the release's accumulating `beta/X.Y.Z`
+branch, build its image
+(`gh workflow run build.yaml --ref beta/X.Y.Z -R oleost/hassio-plejd`), then bump
+`version` here (on `master`, so the store sees it) to the matching tag. Keep this
+folder out of the build workflow's trigger paths — it ships no code, only the pointer.

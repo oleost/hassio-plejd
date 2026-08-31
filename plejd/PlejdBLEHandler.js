@@ -70,8 +70,7 @@ class PlejBLEHandler extends EventEmitter {
   reconnectInProgress = false;
   emergencyReconnectTimeout = null;
 
-  // Refer to BLE-states.md regarding the internal BLE/bluez state machine of Bluetooth states
-  // These states refer to the state machine of this file
+  // These states refer to the internal BLE/BlueZ state machine of this file.
   static STATES = ['MAIN_INIT', 'GET_ADAPTER_PROXY'];
 
   static EVENTS = {

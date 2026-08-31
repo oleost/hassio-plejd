@@ -22,7 +22,7 @@ Git history (`plejd/PlejdApi.js`):
   `{name:'-unknown-', type:'light'}` for ids it couldn't identify; only the
   `default:` branch threw.
 - **Oct 2022 (`12a8f4e`):** the call was wrapped in `try/catch` — commit message:
-  *"Catch errors due to unknown device type to avoid addon crashing"*. So the
+  _"Catch errors due to unknown device type to avoid addon crashing"_. So the
   throw was always a **non-fatal per-device skip**, never a deliberate "fail".
 - **Oct 2022 (`f016058`):** the `-unknown-` placeholders were replaced with real
   per-id mappings from a community device list. Every id now had to be mapped
@@ -41,16 +41,16 @@ keeping the id table only for nice names/descriptions and known quirks.
 `device.traits` is a **bitfield**, not an enum. Bit layout (matches
 `pyplejd` `PlejdTraits`):
 
-| Bit    | Name        | Meaning                    |
-| ------ | ----------- | -------------------------- |
-| `0x01` | POWER       | powerable on/off load      |
-| `0x02` | DIM         | dimmable                   |
-| `0x04` | TEMP        | tunable white              |
-| `0x08` | GROUP       | groupable                  |
-| `0x10` | COVER       | coverable (blinds/shades)  |
-| `0x20` | CLIMATE     | thermostat                 |
-| `0x40` | TILT        | cover tilt                 |
-| `0x80` | CLIMATE_PWM | PWM thermostat             |
+| Bit    | Name        | Meaning                   |
+| ------ | ----------- | ------------------------- |
+| `0x01` | POWER       | powerable on/off load     |
+| `0x02` | DIM         | dimmable                  |
+| `0x04` | TEMP        | tunable white             |
+| `0x08` | GROUP       | groupable                 |
+| `0x10` | COVER       | coverable (blinds/shades) |
+| `0x20` | CLIMATE     | thermostat                |
+| `0x40` | TILT        | cover tilt                |
+| `0x80` | CLIMATE_PWM | PWM thermostat            |
 
 Plejd's own lights report `9` (POWER+GROUP, non-dimmable), `11` (+DIM) or `15`
 (+TEMP). The old code compared `traits` for exact equality with those values,
@@ -78,6 +78,15 @@ work (new command-code decode/encode in `PlejdBLEHandler`, new discovery payload
 in `MqttClient`, routing in `PlejdAddon`). `pyplejd` has working implementations
 to reference — see the `add-plejd-device` skill, section "Protocol reference &
 prior art", and `thomasloven/pyplejd/pyplejd/ble/lastdata.py`.
+
+Tunable-white colour temperature (`0x04` TEMP trait) is **not** in that
+"unsupported" set — it is a light and is fully handled. Since 0.23.1 the add-on
+also decodes the incoming colour-temperature reports so Plejd-app changes sync
+back to Home Assistant: `0x0101` (settled Kelvin, `<addr> 01 03 01 01 <kelvin
+LE>`) and `0x0420` (the app's live slider stream, `<addr> 01 10 04 20 03 01 11
+<kelvin BE>` on a colour-channel address 1–3 slots above the output address). See the
+`BLE_CMD_COLOR_CHANGE || BLE_CMD_COLOR_TEMP_CHANGE` branch in
+`PlejdBLEHandler._onLastDataUpdated`.
 
 Relevant command codes (from `pyplejd`):
 
