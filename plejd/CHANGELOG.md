@@ -6,25 +6,9 @@
 > Plejd hardware support and releases happen here. See
 > [FORK.md](https://github.com/oleost/hassio-plejd/blob/master/FORK.md).
 
-<!--
-  TO CUT STABLE 0.23.0 (see the `add-plejd-device` skill, "Releasing"):
-   1. Rename this heading to `## [0.23.0](https://github.com/oleost/hassio-plejd/tree/0.23.0) (YYYY-MM-DD)`.
-   2. Delete the "> Beta." blockquote below.
-   3. Bump `plejd/config.json` version to `0.23.0`.
-   4. Merge `feat/graceful-device-fallback` -> master.
-   5. Cut a GitHub release `0.23.0` (`gh release create 0.23.0 -R oleost/hassio-plejd ...`) — CI builds + pushes `:0.23.0` and `:latest`.
-   6. Set `plejd-beta/config.json` on master to `0.23.0` too.
-  The **Changed:**/**Fixed:** bullets below are already written in stable form.
--->
+## [0.23.0](https://github.com/oleost/hassio-plejd/tree/0.23.0) (2026-08-31)
 
-## [0.23.0-beta.4](https://github.com/oleost/hassio-plejd/tree/feat/graceful-device-fallback) (2026-08-29)
-
-> Beta. Testable via the **Plejd (beta)** add-on. Please report what shows up (or
-> doesn't) in your setup — especially anything logged as "inferred" or "not yet
-> supported", and whether any device got **renamed** (it shouldn't lose a name).
->
-> beta.4: wireless switches now get their real name from
-> `plejdDevice.installationLocation` (see Fixed). beta.3: double-discovery fix.
+> Shipped after the 0.23.0-beta.1–beta.4 cycle on the **Plejd (beta)** add-on.
 
 **Changed:**
 
@@ -53,7 +37,7 @@
   a sibling `devices[]` title → (unset, so Home Assistant keeps any existing
   name). Output devices use the same fallback chain. The trigger device block
   also carries a `suggested_area` from the Plejd room now. (beta.2 briefly
-  substituted the room name here, which would have *overwritten* good existing
+  substituted the room name here, which would have _overwritten_ good existing
   names — reverted in beta.3; beta.4 replaces the whole approach with the real
   name source.)
 - Device discovery was published twice on startup (once into a not-yet-connected

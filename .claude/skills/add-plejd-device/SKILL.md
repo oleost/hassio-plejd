@@ -199,6 +199,16 @@ Use the established beta channel (see the `beta-release-procedure` memory and
    (pushes the version tag to GHCR; does NOT move `:latest`).
 3. Bump `version` in `plejd-beta/config.json` (master) to that tag so testers can install
    "Plejd (beta)" from the existing store URL.
-4. When confirmed: merge branch → master, bump `plejd/config.json` to the stable version,
-   move the CHANGELOG entry, cut a GitHub release (CI builds + pushes the stable tag and
-   `:latest`), and keep `plejd-beta` in sync.
+4. When confirmed, promote to stable **via a pull request** (not a direct push to master —
+   this is the established practice, see the `stable-release-via-pr` memory):
+   a. On the feature branch: `git merge origin/master` (pick up any beta-pointer commits),
+      rename the CHANGELOG `-beta.N` heading to the plain `[X.Y.Z]` stable heading + date and
+      drop the `> Beta.` blockquote, bump `plejd/config.json` **and** `plejd-beta/config.json`
+      to `X.Y.Z`, run `npm run lint` in `plejd/`.
+   b. `gh pr create -R oleost/hassio-plejd --base master` with a body summarising the release.
+   c. Wait for the build CI (`build.yaml` runs build-only on PRs — both arches must go green),
+      then `gh pr merge --merge` (a real merge commit — **never squash**, it would flatten the
+      curated commit messages).
+   d. `gh release create X.Y.Z -R oleost/hassio-plejd` — CI then builds + pushes `:X.Y.Z` and
+      moves `:latest`. Do this right after merge so the store's advertised version and the
+      published image line up quickly.
