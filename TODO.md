@@ -144,7 +144,7 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
         numeric value (old guard was chicken-and-egg).
 
 - [ ] **`cmd 0x0038` unknown from DWN-01 after a colour change.** Seen 2026-08-31 in a
-      verbose log right after setting colour on the trappoppgang spot:
+      verbose log right after setting colour on a DWN-01 spot:
       `58 01 03 00 38 00 00 13 00 00 00 29 00 …` from the device's own address (88), and a
       6-byte `5a 01 02 00 38 00` companion from the colour-channel address (90). Logged
       `Command 38 unknown` and ignored. Looks like a settings/diagnostics report, not
