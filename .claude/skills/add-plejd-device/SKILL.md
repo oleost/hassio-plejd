@@ -190,25 +190,37 @@ Ask the tester to set `logLevel: debug` (or `verbose`) and confirm:
 
 ## Releasing (beta channel → stable)
 
-Use the established beta channel (see the `beta-release-procedure` memory and
-`plejd-beta/`):
+**One accumulating beta branch per stable release.** Named `beta/X.Y.Z` (the target
+version), it collects every fix headed for that release — you do NOT need a branch per
+fix. See the `beta-release-procedure` and `stable-release-via-pr` memories.
 
-1. Work on a branch (e.g. `fix/hardware-id-mappings`). Bump `plejd/config.json` to a
-   pre-release version (e.g. `0.22.0-beta.1`) and add a `CHANGELOG.md` entry.
-2. Build the beta image: `gh workflow run build.yaml --ref <branch> -R oleost/hassio-plejd`
-   (pushes the version tag to GHCR; does NOT move `:latest`).
-3. Bump `version` in `plejd-beta/config.json` (master) to that tag so testers can install
-   "Plejd (beta)" from the existing store URL.
-4. When confirmed, promote to stable **via a pull request** (not a direct push to master —
-   this is the established practice, see the `stable-release-via-pr` memory):
-   a. On the feature branch: `git merge origin/master` (pick up any beta-pointer commits),
-      rename the CHANGELOG `-beta.N` heading to the plain `[X.Y.Z]` stable heading + date and
-      drop the `> Beta.` blockquote, bump `plejd/config.json` **and** `plejd-beta/config.json`
-      to `X.Y.Z`, run `npm run lint` in `plejd/`.
-   b. `gh pr create -R oleost/hassio-plejd --base master` with a body summarising the release.
-   c. Wait for the build CI (`build.yaml` runs build-only on PRs — both arches must go green),
-      then `gh pr merge --merge` (a real merge commit — **never squash**, it would flatten the
-      curated commit messages).
-   d. `gh release create X.Y.Z -R oleost/hassio-plejd` — CI then builds + pushes `:X.Y.Z` and
-      moves `:latest`. Do this right after merge so the store's advertised version and the
-      published image line up quickly.
+### Adding a fix to the current beta
+
+1. Branch exists as `beta/X.Y.Z`. Commit the fix straight to it (or develop on a
+   throwaway `fix/…` branch and `git merge` it in — do that only when a fix is risky
+   enough that you might want to drop it).
+2. Bump `plejd/config.json` `version` to the next `X.Y.Z-beta.N`. Add / extend the
+   `**Fixed:**` bullets under the `## [X.Y.Z]` heading (which already carries a `> Beta —
+   …` blockquote). Keep bullets final-release quality — don't tag them `(beta.N)`.
+3. Lint (`plejd/` — on Windows: `npm install --ignore-scripts` once, then
+   `node_modules/.bin/eslint` + `prettier`; a plain `npm install` fails on the native BLE
+   dep).
+4. Push the branch. `gh workflow run build.yaml --ref beta/X.Y.Z -R oleost/hassio-plejd`
+   → builds + pushes `ghcr.io/oleost/{arch}-hassio-plejd:X.Y.Z-beta.N` (does NOT move
+   `:latest`).
+5. Bump `version` in `plejd-beta/config.json` **on master** to `X.Y.Z-beta.N`, push
+   master. Testers update the "Plejd (beta)" add-on from the existing store URL.
+
+### Promoting to stable (when the beta is confirmed)
+
+Via a **pull request** (not a direct push to master — the established practice):
+
+a. On `beta/X.Y.Z`: `git merge origin/master`; in the CHANGELOG delete the `> Beta — …`
+   blockquote and set the date; bump `plejd/config.json` **and** `plejd-beta/config.json`
+   to `X.Y.Z`; lint.
+b. `gh pr create -R oleost/hassio-plejd --base master` with a body summarising the release.
+c. Wait for the build CI (`build.yaml`, build-only on PRs — both arches green), then
+   `gh pr merge --merge` (a real merge commit — **never squash**).
+d. `gh release create X.Y.Z -R oleost/hassio-plejd` right after merge — CI then builds +
+   pushes `:X.Y.Z` and moves `:latest`.
+e. Delete `beta/X.Y.Z` (merged; `delete_branch_on_merge` handles the remote).
