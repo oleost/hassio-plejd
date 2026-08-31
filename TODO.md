@@ -124,41 +124,46 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
       `original_name`, `name_by_user: null`, `created_at: 0` (pre-2024.8); MQTT
       integration rebuilt 2026-03-10. Related to but not the same as #326/#327.
 
-- [ ] **`Command 101 unknown` = `0x0101` tunable-white colortemp report, not decoded.**
-      Confirmed 2026-08-31 against the user's live HA: a DWN-01 spot
-      (`light.spotter_tak_trappoppgang`, `FFE41AE56C56_0`) shows `color_temp_kelvin` frozen
-      at the value of the last *HA* command — changing colour in the Plejd app never
-      updates HA. Setting colour from HA works fine.
-      **Root cause:** `PlejdBLEHandler._onLastDataUpdated` only decodes `0x0420`
-      (`BLE_CMD_COLOR_CHANGE`) for colour. When only the white temperature changes, Plejd
-      sends `cmd 0x0101` instead, which hits the `else` branch and is dropped (logged
-      `Command 101 unknown` at verbose). pyplejd = `CMD_TUNABLE_WHITE_TEMPERATURE = 0x0101`.
-      **Decode (from the one sample `4d 01 03 01 01 b8 0b` + pyplejd):** `[0]` addr,
-      `[1]` version `01`, `[2]` command-type, `[3..4]` cmd `0101` BE, `[5..6]` payload.
-      `b8 0b` LE = `0x0bb8` = 3000 → looks like **Kelvin, little-endian** (BE would be
-      47115, nonsense). Needs 2–3 more real samples at known temperatures to lock
-      endianness/unit before shipping — the user has the hardware to capture them
-      (`logLevel: verbose`, change colour temp in the Plejd app, grab `Raw event received`
-      + `Decoded:` lines).
-      **Fix:** add an `else if (cmd === 0x0101)` branch that reads the temperature and
-      emits `COMMANDS.COLOR` with `{ color: <kelvin> }` (+ state on). Low priority,
-      pre-existing, independent of the fallback work. Now testable end-to-end.
+- [ ] **DWN-01 colour-temperature reports from the Plejd app never reach HA (two bugs).**
+      Confirmed 2026-08-31 with a full verbose capture from the user's DWN-01 spot
+      "Spotter tak trappoppgang" (`FFE41AE56C56_0`). Changing colour in the Plejd app: the
+      light physically changes, HA's `color_temp_kelvin` stays frozen at the last *HA*
+      command. Setting colour from HA works. The `0x0101` guess in the old note was wrong —
+      the reports come as **`cmd 0x0420`** (`BLE_CMD_COLOR_CHANGE`), e.g.
+      `5a 01 10 04 20 03 01 11 0e 74` → address `0x5a`=90, payload `03 01 11 <ct>` with
+      `<ct>` = **Kelvin, big-endian** (`0e74`=3700, `0fa0`=4000, `0bb8`=3000, `0898`=2200 —
+      all exact). Same layout pyplejd has (commented): `[addr,01,10,04,20, a, 01, 11, ct_be]`.
 
-- Related side-findings from that same investigation (2026-08-31), **not add-on bugs:**
-  - **"Hidden by integration" on 9 of 28 Plejd lights** (mixed DWN-01 / LED-10 /
-    DIM-01-2P). The add-on's discovery payload has no `enabled_by_default` /
-    `entity_category` / hide flag — verified identical for a hidden and a visible DWN-01
-    via `mqtt/device/debug_info`. The Plejd `hiddenFromIntegrations` cloud field is unused
-    (upstream removed the handling in `5687087`, 2021). This is stale HA entity-registry
-    state from a past manual/bulk hide; a fresh identical discovery does not un-hide an
-    entity. Fix is HA-side: entity settings → toggle "Visible".
-  - **`Trying to set state for null` / `Unknown output id null` bursts** after operating
-    grouped DWN-01 spots: a mesh DIM/STATE/COLOR event arrives from a `bleOutputAddress`
-    that `getOutputDeviceByBleOutputAddress()` doesn't know → same code path and same
-    harmless log-noise as #326/#327 below. Also seeing ~1/min `{"state":"ON","brightness":255}`
-    republishes for the spot (periodic mesh broadcast, no functional effect). Capture the
-    `Decoded: Device null (BLE address X), cmd Y` line at `verbose` to identify the address
-    (likely a secondary output / group address of the grouped downlights).
+      **Bug A — `data` is never populated in the colour branch.**
+      `PlejdBLEHandler._onLastDataUpdated` (~line 898) computes `colorTempKelvin`, logs it,
+      then `this.emit(commandReceived, outputUniqueId, COMMANDS.COLOR, data)` with `data`
+      still `{}`. `_bleCommandReceived` then does `setOutputState(id, undefined, null,
+      undefined)` and emits `{state:false, color:undefined}` — hence the log line
+      `Set color state to undefined`. Fix: `data = { state, dim, color: colorTempKelvin }`
+      (and note bytes 5/7 are *not* state/dim for a `03 01 11` colour packet — for a
+      colour-only report keep state=on and don't touch dim).
+
+      **Bug B — the reporting BLE address is not registered.**
+      The colour reports come from address **90**, which `getOutputDeviceByBleOutputAddress`
+      doesn't know → `Device null` → `Trying to set state for null` /
+      `Unknown output id null`, event dropped before Bug A matters. 90 is the spot's
+      colour-report address, distinct from its registered output address. `DeviceRegistry`
+      only maps `outputAddress[deviceId][output]`; it never maps `deviceAddress[deviceId]`
+      or extra `outputAddress` entries. **Need the cached-API entries for `FFE41AE56C56`**
+      (`deviceAddress`, `outputAddress`, `outputSettings`) to confirm whether 90 is the
+      device address or a second output — then either map those extra addresses in the
+      registry, or add a `deviceAddress`→uniqueId fallback in the decode.
+
+      Same-class as #326/#327 (unregistered address → null spam). Deep-path, but now fully
+      characterised and testable on the user's hardware.
+
+- Side-finding (2026-08-31), **not an add-on bug: "hidden by integration" on 9 of 28
+  Plejd lights** (mixed DWN-01 / LED-10 / DIM-01-2P). The discovery payload has no
+  `enabled_by_default` / `entity_category` / hide flag — verified identical for a hidden
+  and a visible DWN-01 via `mqtt/device/debug_info`. The Plejd `hiddenFromIntegrations`
+  cloud field is unused (upstream removed the handling in `5687087`, 2021). Stale HA
+  entity-registry state from a past manual/bulk hide; a fresh identical discovery does not
+  un-hide an entity. Fix is HA-side: entity settings → toggle "Visible".
 
 - [ ] **#327 — Input devices logged as `null` in verbose logs.**
       Pinpointed by reporter: `PlejdBLEHandler.js` (~line 875-877) uses
