@@ -124,42 +124,32 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
       `original_name`, `name_by_user: null`, `created_at: 0` (pre-2024.8); MQTT
       integration rebuilt 2026-03-10. Related to but not the same as #326/#327.
 
-- [ ] **Tunable-white colour-temperature reports (`cmd 0x0101`) are not decoded → HA
-      never gets live colour temp.** Fully characterised 2026-08-31 from a verbose
-      `plejd_beta` capture across the user's DWN-01 spots (+ DIM-01-2P / LED-10 tunable).
-      Changing colour temp (Plejd app, or an adaptive/circadian scene): the light changes,
-      HA's `color_temp_kelvin` stays frozen at the last value set *from HA*. Setting from HA
-      works.
+- [x] **Tunable-white colour-temperature changes made outside HA didn't reach HA.**
+      Shipped in **0.23.1-beta.4** (2026-08-31, branch `beta/0.23.1`, commit `16219f2`),
+      verified end-to-end on a real DWN-01. Two report paths, both were unhandled:
+      - **Settled value** — a standalone `cmd 0x0101` packet, `<addr> 01 03 01 01 <kelvin LE>`,
+        from the device's own address. No branch for it → `Command 101 unknown` → dropped.
+        Now decoded (`readUInt16LE` at `PAYLOAD_POSITION_OFFSET`, Kelvin).
+      - **Plejd-app slider stream** — `cmd 0x0420` packets, `<addr> 01 10 04 20 03 01 11 <kelvin BE>`,
+        on a separate "colour channel" BLE address 1–2 slots above the device's main output
+        address, which the site data (`outputAddress` / `deviceAddress` / `roomAddress`)
+        does not tie to the device. Resolved by nearest-address lookup (X−1..X−3 for a
+        tunable-white output) + `DeviceRegistry.aliasOutputAddress` so later events on that
+        address go straight through.
+      - Also fixed: the `0x0420` branch computed the colour temp but emitted an empty
+        payload (`Set color state to undefined`); a colour-only report set `data.state`
+        undefined → told HA the light was off (now keeps current state); the `01 02 01 01 00`
+        companion packet + any colour report on an unregistered address are dropped quietly
+        (no more null spam); `DeviceRegistry.setOutputState` stores `colorTemp` on any
+        numeric value (old guard was chicken-and-egg).
 
-      **The report packet** (7 bytes): `<addr> 01 03 01 01 <kelvin LE>`, e.g.
-      `58 01 03 01 01 98 08` from address 88 (= the trappoppgang spot's *registered*
-      address — resolves correctly, **not** null). `98 08` LE = `0x0898` = 2200 K. More
-      samples, all exact Kelvin: `b8 0b`=3000, `80 0c`=3200, `f0 0a`=2800, `c4 09`=2500,
-      `60 09`=2400. So: `cmd 0x0101`, payload = `readUInt16LE(PAYLOAD_POSITION_OFFSET)` (offset
-      5), unit **Kelvin**. No state/dim byte in the packet.
-
-      **Root cause:** `PlejdBLEHandler._onLastDataUpdated` has no `else if (cmd === 0x0101)`
-      branch → falls to `else` → logged `Command 101 unknown` → dropped. The device IS
-      identified correctly; the earlier "address 90 / register deviceAddress" theory was a
-      red herring from a *different* packet seen during scene-toggling (`cmd 0x0420`,
-      `<addr+2>`, `03 01 11 <kelvin BE>`).
-
-      **Fix:**
-      1. Add `else if (cmd === 0x0101)` → `data = { color: decoded.readUInt16LE(PAYLOAD_POSITION_OFFSET) }`,
-         `command = COMMANDS.COLOR`, emit.
-      2. `_bleCommandReceived` COLOR handler currently does
-         `setOutputState(id, data.state, null, data.color)` + emits `{ state: !!data.state, ... }`
-         — with a colour-only update `data.state` is undefined → tells HA the light is OFF.
-         Must preserve current state on a colour-only report.
-      3. While here, the existing `0x0420` colour branch (~line 898) has the same defect —
-         it computes `colorTempKelvin` but emits with `data` still `{}` (log:
-         `Set color state to undefined`). Populate `data` there too. `0x0420` colour layout
-         is `03 01 11 <kelvin BE>` (note: BE, unlike `0x0101`).
-      4. Optional: the companion `<addr> 01 02 01 01 00` packets (command-type `0x02`, no
-         payload, from unregistered nearby addresses) are harmless null-spam — same class as
-         #326/#327; could suppress the warning for `cmd 0x0101` + null device.
-
-      Deep-path but fully characterised and testable on the user's hardware. Ship to beta.
+- [ ] **`cmd 0x0038` unknown from DWN-01 after a colour change.** Seen 2026-08-31 in a
+      verbose log right after setting colour on the trappoppgang spot:
+      `58 01 03 00 38 00 00 13 00 00 00 29 00 …` from the device's own address (88), and a
+      6-byte `5a 01 02 00 38 00` companion from the colour-channel address (90). Logged
+      `Command 38 unknown` and ignored. Looks like a settings/diagnostics report, not
+      colour — HA doesn't need it. Low priority; decode only if it turns out to carry
+      something useful (dim curve? load diagnostics?).
 
 - Side-finding (2026-08-31), **not an add-on bug: "hidden by integration" on 9 of 28
   Plejd lights** (mixed DWN-01 / LED-10 / DIM-01-2P). The discovery payload has no
@@ -169,15 +159,22 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
   entity-registry state from a past manual/bulk hide; a fresh identical discovery does not
   un-hide an entity. Fix is HA-side: entity settings → toggle "Visible".
 
-- [ ] **#327 — Input devices logged as `null` in verbose logs.**
-      Pinpointed by reporter: `PlejdBLEHandler.js` (~line 875-877) uses
-      `getOutputDeviceByBleOutputAddress()` for what may be an *input* device, which
-      returns null. Needs an input-address lookup fallback. Verbose logs only.
+- [x] **#327 — Input devices logged as `null` in verbose logs.** Not pursuing (by
+      design). `_onLastDataUpdated` (~line 875) looks up `getOutputDeviceByBleOutputAddress`;
+      a packet from an input device's address resolves to nothing, so the `verbose` line
+      reads `Decoded: Device null (BLE address X)`. That line is deliberate diagnostic
+      output — it's exactly what let us pin down the DWN-01 colour-channel address (90) in
+      the 2026-08-31 session. Only logged at `verbose` (opt-in). Prettifying it has ~no
+      value and risks hiding a real "unknown address" case. Leave it.
 
-- [ ] **#326 — WRT-01 "Trying to set state for null" warnings.**
-      Same root cause as #327 — WRT-01s have no output of their own (they control other
-      devices), so events resolve to null and emit warnings. Harmless but noisy; handle
-      input-only devices gracefully. Fix together with #327.
+- [ ] **#326 — WRT-01 "Trying to set state for null" warnings.** A WRT-01 (rotary, no
+      output of its own) broadcasts DIM-like events on its own address → `_onLastDataUpdated`
+      emits `commandReceived(null, DIM)` → `setOutputState(null)` → a `WARN` line. Shows at
+      the default log level, so this one is worth silencing (unlike #327). Fix would mirror
+      what 0.23.1-beta.4 already does for colour reports: `!outputUniqueId` on DIM/STATE →
+      drop quietly at `debug`, don't emit. **Blocked: needs a WRT-01 owner to confirm the
+      packet shape and that the fix doesn't suppress anything real** — neither the fork
+      maintainer nor the current beta tester has one.
 
 ## Needs triage (may be hardware/user/feature, not confirmed our bug)
 
@@ -201,7 +198,20 @@ decode/encode — see `docs/device-classification.md` and the `add-plejd-device`
   `0x0461` mode/PWM.
 - #300 — WMS-01 motion sensor support — HA `binary_sensor`/`sensor`. Read-only; lowest
   risk of the three. Needs the `motionSensors` array (not in `types/ApiSite.d.ts` yet).
-- #247 — Bluetooth-proxy support
+- #247 — **Bluetooth-proxy / ESP32 support.** The add-on talks to BlueZ directly
+  (`dbus-next`), so it only sees local HCI adapters — hence "requires an exclusive USB
+  dongle". The ESP32 BT-proxy support other Plejd projects have is HA-core's work
+  (`habluetooth` / `bleak-esphome` translating GATT ↔ ESPHome native API); an add-on
+  can't borrow it. Nothing in the Plejd protocol needs a dongle.
+  **Realistic path (if ever): option A** — a Node ESPHome-native-API client (protobuf,
+  TCP:6053) as a second BLE backend behind `PlejdBLEHandler`, talking to a dedicated
+  ESP32 with `bluetooth_proxy: active: true` (~8 protobuf message types: advertisement /
+  connect / GATT get-services|read|write|notify). Stays single-language; risk is Node
+  ESPHome-BLE library maturity for *active* GATT (worst case: vendor the ~8 handlers —
+  the proto is public/stable). Rejected: a Python sidecar (polyglot image, IPC,
+  two dep sets); custom ESP32 firmware (a from-scratch C++ project, no shared codebase
+  with the JS add-on — only shared protocol docs + test vectors). Shape: keep BlueZ as
+  default, add a `bleTransport: bluez | esphome` option, beta-test with one ESP32.
 - #186 — Healthcheck/ping
 - #185 — Virtual device
 - #163 — Document the Plejd BLE protocol (partly done in `docs/device-classification.md`)

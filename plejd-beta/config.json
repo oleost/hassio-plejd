@@ -1,6 +1,6 @@
 {
   "name": "Plejd (beta)",
-  "version": "0.23.0",
+  "version": "0.23.1-beta.4",
   "slug": "plejd_beta",
   "description": "Beta channel for the Plejd add-on. Pulls the pre-built beta image for testing unreleased changes. Install alongside (not together with) the stable Plejd add-on.",
   "url": "https://github.com/oleost/hassio-plejd/",
