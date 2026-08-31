@@ -54,11 +54,21 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
 
 ## P2 — Real logic bugs, more nuanced
 
-- [ ] **#255 — Min brightness mismatch (HA 0 = off, Plejd 0 = on/min).**
-      Transition down to 0 misbehaves (jumps from full brightness instead of from min).
-      Fix idea from reporter: swap 0 ↔ 1 when translating brightness between Plejd and
-      HA (don't scale, precision is only 0..255). Touches brightness handling in
-      `plejd/PlejdDeviceCommunication.js` (transitions) and the BLE encode/decode.
+- [~] **#255 — Min brightness mismatch (HA 0 = off, Plejd 0 = on/min).**
+      Largely a non-issue in this fork. The receive direction is already handled:
+      `PlejdDeviceCommunication._bleCommandReceived` maps `dim === 0 && state === 1` →
+      `dim = 1`, so a Plejd load sitting on its app-configured minimum shows in HA as
+      "on, ~0%" (1/255 rounds to 0% in the card) and never as off / full. Verified on a
+      real setup 2026-08-31.
+      The send direction *cannot* be fixed: HA's light model defines brightness 0 ≡ off,
+      and `_setLightState` maps any `brightness <= 0` to `TURN_OFF`. "On but held at
+      absolute minimum from the HA slider" is not expressible in HA for any light. The
+      Plejd app's sub-1% minimum-brightness calibration is Plejd's own and not exposed.
+      Only remainder: the reporter's narrow claim that `light.turn_off` *with a
+      `transition:`* from minimum animates full→0 instead of min→0. Not reproduced in
+      current code (`_transitionTo` reads `initialBrightness` from the stored dim, which
+      is 1 at minimum); likely an old-upstream artefact. Low value, hard to repro —
+      revisit only if someone reports the transition glitch on this fork.
 
 - [ ] **#152 — Room brightness never updated on state changes.**
       With `includeRoomsAsLights = true`, room brightness is only set from HA, never
@@ -66,10 +76,13 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
       fade). Reporter suggests computing room brightness as MAX of member lights on each
       update. Design-adjacent; touches room/output state aggregation.
 
-- [ ] **#269 — Scenes with å/ä/ö not imported.**
-      Scene names with non-ASCII characters silently fail to import (character encoding).
-      In this fork's scene domain. Check scene parsing/import in `plejd/PlejdApi.js` /
-      `plejd/Scene.js`.
+- [x] **#269 — Scenes with å/ä/ö not imported.** Old upstream report (2022, pre-TS-rewrite
+      monolith — that code is gone). This fork's scene handling uses the scene UUID
+      (`scene.sceneId`) for every MQTT topic and `unique_id`; the title is only a UTF-8
+      JSON string value in the discovery payload (`name`). No title-based filtering, slug
+      or `.replace()` anywhere in `PlejdApi._getSceneDevices` / `SceneManager` / `Scene`.
+      User confirms scenes with `ø` import fine, and ä/ö take the identical code path.
+      Reopen only if an å/ä/ö scene actually goes missing.
 
 ## P3 — Real but cosmetic / log-noise only
 
