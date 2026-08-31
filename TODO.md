@@ -31,29 +31,26 @@ Legend: `[ ]` todo · `[~]` needs triage · `[x]` done/closed for us
         "feedback welcome" note in the changelog and README. Recognition-only change,
         no risk to other devices. Reopen only if a reporter says it still fails.
 
-- [~] **Unknown hardware ids in general — graceful fallback.** `_getDeviceType()` no
+- [x] **Unknown hardware ids in general — graceful fallback.** `_getDeviceType()` no
       longer throws on an unmapped id; `_inferDeviceType()` classifies from
       `device.traits` / `device.outputType` / `inputSetting.buttonType` (approach
       borrowed from `thomasloven/pyplejd`, which dropped its hw-id table entirely).
       Plain lights/relays/buttons with unknown ids now work automatically. Covers,
       thermostats and motion sensors are detected and logged as "not yet supported"
-      then skipped. Branch `feat/graceful-device-fallback`; rationale + `pyplejd`
-      command-code notes in `docs/device-classification.md`. beta.2-3 fold in the #325
-      discovery fix and the unnamed-switch fix below. When confirmed: merge → master,
-      cut stable `0.23.0`. This makes most future "unknown hardware id" reports
-      non-issues.
+      then skipped. Rationale + `pyplejd` command-code notes in
+      `docs/device-classification.md`. Shipped in **stable 0.23.0** (2026-08-31,
+      PR #1). This makes most future "unknown hardware id" reports non-issues.
 
 ## P1 — Real bugs, broad impact, clear fix
 
-- [~] **#325 — `Cannot read property 'publish' of undefined` on eager discovery.**
+- [x] **#325 — `Cannot read property 'publish' of undefined` on eager discovery.**
       Confirmed the pattern in our fork: `PlejdAddon.init()` called
       `sendDiscoveryToHomeAssistant()` right after `mqttClient.init()`, before the
       broker connection was up — publishing into a not-yet-connected client and
       duplicating every discovery message (seen in a real 0.23.0-beta.1 startup log).
-      Fixed on `feat/graceful-device-fallback` (since 0.23.0-beta.2): removed the
-      premature call; `sendDiscoveryToHomeAssistant()` now no-ops unless
+      Removed the premature call; `sendDiscoveryToHomeAssistant()` now no-ops unless
       `this.client.connected`. Discovery still fires from the `connected` handler and
-      on every HA birth message. Ships with the graceful-fallback beta.
+      on every HA birth message. Shipped in **stable 0.23.0** (2026-08-31).
 
 ## P2 — Real logic bugs, more nuanced
 
