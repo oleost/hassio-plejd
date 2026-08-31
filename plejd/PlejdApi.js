@@ -259,6 +259,16 @@ class PlejdApi {
     this._getPlejdDevices();
     this._getRoomDevices();
     this._getSceneDevices();
+
+    // Diagnostic: the BLE address maps (not secret). Helps pin down which address
+    // a tunable device streams colour temperature on when it isn't the main one.
+    logger.debug(
+      `Address maps — deviceAddress: ${JSON.stringify(
+        this.siteDetails.deviceAddress,
+      )}, outputAddress: ${JSON.stringify(
+        this.siteDetails.outputAddress,
+      )}, roomAddress: ${JSON.stringify(this.siteDetails.roomAddress)}`,
+    );
   }
 
   _getAxiosInstance() {
@@ -739,6 +749,23 @@ class PlejdApi {
             };
 
             this.deviceRegistry.addOutputDevice(outputDevice);
+
+            // Tunable-white devices (DWN-01, …) stream colour-temperature changes
+            // on a DIFFERENT BLE address than their on/off/dim output — the
+            // physical `deviceAddress`, and/or a further entry in
+            // `outputAddress[deviceId]`. Neither has a `devices[]` entry, so the
+            // loop never registers it. Alias every such address for this device
+            // to the same output so its colour-temp reports resolve instead of
+            // logging as `Device null`.
+            Object.entries(outputAddress).forEach(([outIdx, aliasAddress]) => {
+              if (Number(outIdx) !== deviceOutput && typeof aliasAddress === 'number') {
+                this.deviceRegistry.aliasOutputAddress(aliasAddress, uniqueOutputId);
+              }
+            });
+            const physicalAddress = this.siteDetails.deviceAddress[device.deviceId];
+            if (typeof physicalAddress === 'number' && physicalAddress !== bleOutputAddress) {
+              this.deviceRegistry.aliasOutputAddress(physicalAddress, uniqueOutputId);
+            }
           } catch (error) {
             logger.error(`Error trying to create output device: ${error}`);
             logger.warn(

@@ -105,10 +105,22 @@ class PlejdDeviceCommunication extends EventEmitter {
           brightness: data.dim,
         });
       } else if (command === COMMANDS.COLOR) {
-        this.deviceRegistry.setOutputState(uniqueOutputId, data.state, null, data.color);
-        logger.verbose(`Set color state to ${data.color}. Emitting EVENTS.stateChanged`);
+        // The HA-set echo (PlejdBLEHandler.sendCommand) includes `state`; a mesh
+        // colour-temperature report does not — fall back to the device's current
+        // state/brightness so HA isn't told the light turned off.
+        const device = this.deviceRegistry.getOutputDevice(uniqueOutputId);
+        let colorState = data.state;
+        if (colorState === undefined) {
+          colorState = device && device.state !== undefined ? device.state : true;
+        }
+        const colorBrightness = device ? device.dim : undefined;
+        this.deviceRegistry.setOutputState(uniqueOutputId, !!colorState, null, data.color);
+        logger.verbose(
+          `Set colour to ${data.color}K for ${uniqueOutputId}. Emitting EVENTS.stateChanged`,
+        );
         this.emit(PlejdDeviceCommunication.EVENTS.stateChanged, uniqueOutputId, {
-          state: !!data.state,
+          state: !!colorState,
+          brightness: colorBrightness,
           color: data.color,
         });
       } else if (command === COMMANDS.TURN_ON) {
