@@ -83,6 +83,11 @@ const BLE = {
     STATE_CHANGE: 0x0097,
     DIM_CHANGE: 0x00c8,
     COLOR_CHANGE: 0x0420,
+    // Standalone tunable-white colour-temperature report (no state/dim in the
+    // packet): `<addr> 01 03 01 01 <kelvin LE>`. Sent when only the colour
+    // temperature changes (Plejd app, adaptive/circadian scenes). pyplejd calls
+    // this CMD_TUNABLE_WHITE_TEMPERATURE.
+    COLOR_TEMP_CHANGE: 0x0101,
   },
   BROADCAST_DEVICE_ID: 0x01,
 };

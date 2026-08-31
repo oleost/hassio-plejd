@@ -99,6 +99,21 @@ class DeviceRegistry {
     }
   }
 
+  /**
+   * Map an extra BLE address to an already-registered output — e.g. a
+   * tunable-white device's separate colour-temperature channel, which has no
+   * `devices[]` entry of its own. No-op if the address is already mapped.
+   * @param {number} bleOutputAddress
+   * @param {string} uniqueOutputId
+   */
+  aliasOutputAddress(bleOutputAddress, uniqueOutputId) {
+    if (this.outputUniqueIdByBleOutputAddress[bleOutputAddress] !== undefined) {
+      return;
+    }
+    this.outputUniqueIdByBleOutputAddress[bleOutputAddress] = uniqueOutputId;
+    logger.verbose(`Aliased BLE address ${bleOutputAddress} -> output ${uniqueOutputId}`);
+  }
+
   /** @param scene {import('types/DeviceRegistry').OutputDevice} */
   addScene(scene) {
     this.sceneDevices = {
@@ -272,7 +287,7 @@ class DeviceRegistry {
     if (typeof dim === 'number' && device.dimmable) {
       device.dim = dim;
     }
-    if (typeof color === 'number' && device.colorTemp) {
+    if (typeof color === 'number') {
       device.colorTemp = color;
     }
     if (Logger.shouldLog('silly')) {

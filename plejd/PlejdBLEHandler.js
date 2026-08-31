@@ -32,6 +32,7 @@ const {
   STATE_CHANGE: BLE_CMD_STATE_CHANGE,
   DIM_CHANGE: BLE_CMD_DIM_CHANGE,
   COLOR_CHANGE: BLE_CMD_COLOR_CHANGE,
+  COLOR_TEMP_CHANGE: BLE_CMD_COLOR_TEMP_CHANGE,
 } = BLE_COMMANDS;
 
 const BLE_CMD_DIM2_CHANGE = 0x0098; // Dim + state update
@@ -895,18 +896,69 @@ class PlejBLEHandler extends EventEmitter {
       command = COMMANDS.DIM;
       data = { state, dim };
       this.emit(PlejBLEHandler.EVENTS.commandReceived, outputUniqueId, command, data);
-    } else if (cmd === BLE_CMD_COLOR_CHANGE) {
-      const colorTempKelvin =
-        decoded.length > COLOR_TEMP_POSITION_OFFSET
-          ? decoded.readUInt16BE(COLOR_TEMP_POSITION_OFFSET - 1)
-          : 0;
+    } else if (cmd === BLE_CMD_COLOR_CHANGE || cmd === BLE_CMD_COLOR_TEMP_CHANGE) {
+      // Two colour-temperature report formats, both Kelvin:
+      //  - 0x0420: `<addr> 01 10 04 20 <a> 01 11 <kelvin BE>` (streamed while the
+      //    Plejd app slider moves). The usual state/dim offsets hold the
+      //    `<a> 01 11` marker, not real values.
+      //  - 0x0101: `<addr> 01 03 01 01 <kelvin LE>` (settled value). A 6-byte
+      //    companion `<addr> 01 02 01 01 00` (no payload) is broadcast alongside
+      //    from a nearby address — ignore it.
+      let colorTempKelvin;
+      if (cmd === BLE_CMD_COLOR_CHANGE) {
+        if (decoded.length <= COLOR_TEMP_POSITION_OFFSET) {
+          return;
+        }
+        colorTempKelvin = decoded.readUInt16BE(COLOR_TEMP_POSITION_OFFSET - 1);
+      } else {
+        if (decoded.length < PAYLOAD_POSITION_OFFSET + 2) {
+          if (Logger.shouldLog('verbose')) {
+            logger.verbose(`Colour-temp companion packet ignored: ${decoded.toString('hex')}`);
+          }
+          return;
+        }
+        colorTempKelvin = decoded.readUInt16LE(PAYLOAD_POSITION_OFFSET);
+      }
+
+      let colourDeviceId = outputUniqueId;
+      let colourDeviceName = deviceName;
+      if (!colourDeviceId) {
+        // Some tunable devices stream colour temperature on a channel address a
+        // few slots above their main output address, and that channel address is
+        // not in the site's per-device address list, so it can't be aliased at
+        // startup. Resolve it to the nearest tunable-white device just below and
+        // remember the mapping.
+        for (let delta = 1; delta <= 3 && !colourDeviceId; delta += 1) {
+          const near = this.deviceRegistry.getOutputDeviceByBleOutputAddress(
+            bleOutputAddress - delta,
+          );
+          if (near && near.colorTempSettings) {
+            colourDeviceId = near.uniqueId;
+            colourDeviceName = near.name;
+            this.deviceRegistry.aliasOutputAddress(bleOutputAddress, near.uniqueId);
+            logger.info(
+              `Colour-temp channel address ${bleOutputAddress} resolved to ${near.name} ` +
+                `(${near.uniqueId}, output address ${bleOutputAddress - delta}).`,
+            );
+          }
+        }
+      }
+
+      if (!colourDeviceId) {
+        logger.debug(
+          `Colour-temp report ${colorTempKelvin}K for unmapped BLE address ${bleOutputAddress} ` +
+            `(cmd ${cmd.toString(16)}) — no tunable device found near it, ignoring.`,
+        );
+        return;
+      }
 
       logger.debug(
-        `${deviceName} (${outputUniqueId}) got state+dim+color update. S: ${state}, D: ${dim}, C: ${colorTempKelvin}K`,
+        `${colourDeviceName} (${colourDeviceId}) got colour-temp update. C: ${colorTempKelvin}K`,
       );
 
       command = COMMANDS.COLOR;
-      this.emit(PlejBLEHandler.EVENTS.commandReceived, outputUniqueId, command, data);
+      data = { color: colorTempKelvin };
+      this.emit(PlejBLEHandler.EVENTS.commandReceived, colourDeviceId, command, data);
     } else if (cmd === BLE_CMD_STATE_CHANGE) {
       logger.debug(`${deviceName} (${outputUniqueId}) got state update. S: ${state}`);
       command = state ? COMMANDS.TURN_ON : COMMANDS.TURN_OFF;

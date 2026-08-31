@@ -6,6 +6,24 @@
 > pre-built image pipeline. See
 > [FORK.md](https://github.com/oleost/hassio-plejd/blob/master/FORK.md).
 
+## [0.23.1](https://github.com/oleost/hassio-plejd/tree/0.23.1) (2026-08-31)
+
+> Shipped after the 0.23.1-beta.1–beta.4 cycle on the **Plejd (beta)** add-on.
+
+**Fixed:**
+
+- **Colour-temperature changes made outside Home Assistant now reach HA.** Tunable-white
+  lights (DWN-01, LED-75, OUT-02, …) report colour temperature in two ways the add-on
+  didn't handle: a settled value as a standalone `0x0101` packet (previously logged
+  `Command 101 unknown` and dropped), and — while the Plejd app colour slider moves — a
+  stream of `0x0420` packets on a separate BLE channel address that the site data doesn't
+  tie to the device. Both are now decoded; the channel address is resolved to the nearest
+  tunable light and remembered. A colour-only report also no longer tells HA the light
+  turned off — it carries no on/off state, so the current state is kept.
+- Less log noise: colour reports that land on a BLE address with no registered output —
+  including an empty companion packet Plejd broadcasts alongside each report — are dropped
+  quietly instead of `Trying to set state for null` / `Unknown output id null` warnings.
+
 ## [0.23.0](https://github.com/oleost/hassio-plejd/tree/0.23.0) (2026-08-31)
 
 > Shipped after the 0.23.0-beta.1–beta.4 cycle on the **Plejd (beta)** add-on.
