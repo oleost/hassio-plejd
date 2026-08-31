@@ -6,18 +6,15 @@ Assistant add-on that bridges Plejd BLE devices to Home Assistant over MQTT.
 
 ## Why the fork exists
 
-Two reasons, in order of importance today:
-
-1. **Upstream is no longer maintained.** The original repository has gone a long time
-   with no releases and no meaningful response to issues or pull requests. People
-   running it still hit bugs and still buy new Plejd hardware that needs support.
-   Someone has to keep the lights working — literally — so this fork does.
-2. **Scene handling needed work.** The fork originally started to fix how Plejd
-   *scenes* integrate with Home Assistant (scenes as Device Automation triggers,
+1. **Scene handling needed work.** The fork originally started to fix how Plejd
+   _scenes_ integrate with Home Assistant (scenes as Device Automation triggers,
    per-scene "Last Triggered" history, no ghost activations on restart). Those
    changes are described in the [repository README](README.md#this-fork).
+2. **Keeping it going.** Upstream has been quiet for a while, but people still run the
+   add-on, still hit bugs, and still buy new Plejd hardware that needs support. This
+   fork keeps that ticking over — bug triage, new hardware ids, and regular releases.
 
-## What "maintained" means here
+## How this fork is kept up
 
 - **Bug triage.** Known issues carried over from upstream are tracked in
   [`TODO.md`](TODO.md) with priorities and status.

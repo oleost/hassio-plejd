@@ -6,27 +6,28 @@ This is an add-on **repository** that you add to the Home Assistant Add-on Store
 
 ## This fork
 
-**Upstream ([icanos/hassio-plejd](https://github.com/icanos/hassio-plejd)) is no longer
-maintained** — it has had no releases or meaningful activity for a long time. This
-repository is the actively maintained continuation: bug fixes, new Plejd hardware
-support, and regular releases happen here. If you are running the upstream add-on, this
-is the fork to move to. See [FORK.md](FORK.md) for the background and what "maintained"
-means in practice.
+A fork of [icanos/hassio-plejd](https://github.com/icanos/hassio-plejd) (the original,
+by [Marcus Westin](https://github.com/icanos)). It started with changes to how Plejd
+**scenes** integrate with Home Assistant and has since added broader device support and
+a pre-built image pipeline. Anything not listed below works the same as upstream.
 
-It started as a fork focused on how Plejd **scenes** integrate with Home Assistant;
-everything else (lights, switches, relays, button/rotary inputs, MQTT auto-discovery,
-app→HA notifications) still works the same as upstream did.
+What this fork adds:
 
-What this fork adds/changes compared to upstream:
+- **Improved scene handling.** Scenes work as Device Automation triggers (`subtype: scene`),
+  which fixes the "Integration not found" error when using a scene as a trigger. Each scene
+  also gets a "Last Triggered" Event entity, is grouped under a single Plejd device, keeps
+  its "Activate" button available across restarts, and no longer fires ghost activations
+  from retained MQTT messages on startup.
+- **More hardware.** Newer device / hardware-id revisions that upstream didn't recognise
+  (DIM-02-LC2, WPH-01-LC, WRT-01, SPD-01, OUT-02, …) are mapped.
+- **Unknown devices no longer disappear.** An unrecognised hardware id is classified from
+  its reported capabilities instead of being skipped, so new Plejd products usually work
+  without a code change.
+- **Pre-built images.** The add-on ships as a multi-arch image from GHCR instead of
+  building on your machine.
 
-- **Scenes work as Device Automation triggers.** Scenes are published as `button_short_press` triggers (`subtype: scene`), so they show up correctly in the Home Assistant automation UI. This fixes the upstream "Integration not found" problem when trying to use a scene as a trigger.
-- **Scene "Last Triggered" history.** Each scene gets a dedicated Event entity that records when it was last activated, so you can see scene activation history in Home Assistant.
-- **Scenes grouped as a single device.** The scene's "Activate" button and its Event entity are grouped under one Plejd device in Home Assistant, instead of being scattered as separate entities.
-- **No more ghost scene activations on startup.** Retained MQTT `SET` messages for scenes are ignored (and cleared) on startup, so a scene is not accidentally re-triggered when the add-on restarts. This guard only applies to scenes — retained commands for lights/switches are still honored.
-- **Scene "Activate" button stays available.** The scene availability message is now retained, so the activate button does not disappear after a restart.
-
-This fork carries the scene-related changes above, plus a pre-built image pipeline and
-ongoing fixes/device support (see the add-on [changelog](plejd/CHANGELOG.md)).
+See the [changelog](plejd/CHANGELOG.md) for the full history and [FORK.md](FORK.md) for
+background.
 
 ## Requirements
 
